@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nybble Agent - Petoi 机器人控制</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐱 Nybble Agent</h1>
+            <p class="subtitle">Petoi Nybble 机器人控制系统</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="control">控制面板</button>
+            <button class="tab-btn" data-tab="chat">AI 对话</button>
+            <button class="tab-btn" data-tab="skills">技能</button>
+            <button class="tab-btn" data-tab="gaits">步态</button>
+            <button class="tab-btn" data-tab="joints">关节</button>
+            <button class="tab-btn" data-tab="settings">设置</button>
+        </nav>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">连接状态:</span>
+                <span id="connection-status" class="status-value disconnected">未连接</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">串口:</span>
+                <span id="port-display" class="status-value">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">波特率:</span>
+                <span id="baudrate-display" class="status-value">115200</span>
+            </div>
+        </div>
+
+        <main>
+            <section id="control-tab" class="tab-content active">
+                <div class="panel">
+                    <h2>连接设置</h2>
+                    <div class="form-group">
+                        <label for="port-select">串口:</label>
+                        <select id="port-select">
+                            <option value="">选择串口...</option>
+                        </select>
+                        <button id="refresh-ports" class="btn btn-secondary">刷新</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="baudrate-select">波特率:</label>
+                        <select id="baudrate-select">
+                            <option value="9600">9600</option>
+                            <option value="57600">57600</option>
+                            <option value="115200" selected>115200</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button id="connect-btn" class="btn btn-primary">连接</button>
+                        <button id="disconnect-btn" class="btn btn-danger" disabled>断开</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>快速控制</h2>
+                    <div class="quick-controls">
+                        <div class="control-row">
+                            <button class="btn btn-gait" data-gait="walk_forward">↑ 前进</button>
+                        </div>
+                        <div class="control-row">
+                            <button class="btn btn-gait" data-gait="walk_left">↰ 左转</button>
+                            <button class="btn btn-skill" data-skill="balance">站立</button>
+                            <button class="btn btn-gait" data-gait="walk_right">↱ 右转</button>
+                        </div>
+                        <div class="control-row">
+                            <button class="btn btn-gait" data-gait="trot_forward">↑ 小跑</button>
+                        </div>
+                    </div>
+                    <div class="quick-controls">
+                        <div class="control-row">
+                            <button class="btn btn-skill" data-skill="sit">坐下</button>
+                            <button class="btn btn-skill" data-skill="rest">休息</button>
+                            <button class="btn btn-skill" data-skill="butt_up">翘臀</button>
+                        </div>
+                        <div class="control-row">
+                            <button class="btn btn-skill" data-skill="hi">打招呼</button>
+                            <button class="btn btn-skill" data-skill="pu">俯卧撑</button>
+                            <button class="btn btn-skill" data-skill="zero">归零</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>自定义命令</h2>
+                    <div class="form-group">
+                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)">
+                    </div>
+                    <button id="send-command" class="btn btn-primary">发送</button>
+                </div>
+            </section>
+
+            <section id="chat-tab" class="tab-content">
+                <div class="panel chat-panel">
+                    <h2>
+                        🤖 AI 智能控制
+                        <span id="ai-status" class="ai-status"></span>
+                        <button id="clear-chat" class="btn btn-secondary btn-small">清除对话</button>
+                    </h2>
+                    <div class="chat-hint">
+                        <p>与 AI 对话，让它帮你控制机器猫！试试说：</p>
+                        <div class="chat-examples">
+                            <button class="example-btn" data-msg="坐下">坐下</button>
+                            <button class="example-btn" data-msg="向前走几步">向前走</button>
+                            <button class="example-btn" data-msg="打个招呼">打招呼</button>
+                            <button class="example-btn" data-msg="做个俯卧撑">俯卧撑</button>
+                            <button class="example-btn" data-msg="先坐下，然后站起来">组合动作</button>
+                        </div>
+                    </div>
+                    <div id="chat-messages" class="chat-messages">
+                        <div class="welcome-message">
+                            <p>👋 你好！我是 Nybble 的 AI 助手。</p>
+                            <p>告诉我你想让机器猫做什么，我会帮你生成相应的动作命令。</p>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="chat-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="auto-execute" checked>
+                                自动执行动作
+                            </label>
+                        </div>
+                        <div class="chat-input-row">
+                            <input type="text" id="chat-input" placeholder="输入你想让机器猫做的事..." disabled>
+                            <button id="chat-send" class="btn btn-primary" disabled>发送</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="skills-tab" class="tab-content">
+                <div class="panel">
+                    <h2>技能列表</h2>
+                    <div id="skills-grid" class="command-grid">
+                    </div>
+                </div>
+            </section>
+
+            <section id="gaits-tab" class="tab-content">
+                <div class="panel">
+                    <h2>步态列表</h2>
+                    <div id="gaits-grid" class="command-grid">
+                    </div>
+                </div>
+            </section>
+
+            <section id="joints-tab" class="tab-content">
+                <div class="panel">
+                    <h2>关节控制</h2>
+                    <div id="joints-controls" class="joints-grid">
+                    </div>
+                </div>
+            </section>
+
+            <section id="settings-tab" class="tab-content">
+                <div class="panel">
+                    <h2>API 设置</h2>
+                    <p class="hint">配置 AI API 用于智能控制功能</p>
+                    <div class="form-group">
+                        <label for="api-provider">提供商:</label>
+                        <select id="api-provider">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="moonshot">Moonshot (月之暗面)</option>
+                            <option value="zhipu">智谱 AI</option>
+                            <option value="qwen">通义千问</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="api-key">API Key:</label>
+                        <input type="password" id="api-key" placeholder="输入 API Key">
+                    </div>
+                    <div class="form-group">
+                        <label for="api-base-url">Base URL (可选):</label>
+                        <input type="text" id="api-base-url" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="form-group">
+                        <label for="api-model">模型:</label>
+                        <div class="model-select-container">
+                            <select id="api-model">
+                                <option value="">选择模型...</option>
+                            </select>
+                            <button id="scan-models" class="btn btn-secondary btn-small" type="button">扫描模型</button>
+                            <span id="scan-status" class="scan-status"></span>
+                        </div>
+                    </div>
+                    <button id="save-apikey" class="btn btn-primary">保存 API 设置</button>
+                </div>
+
+                <div class="panel">
+                    <h2>串口设置</h2>
+                    <div class="form-group">
+                        <label for="default-port">默认串口:</label>
+                        <input type="text" id="default-port" placeholder="/dev/serial0">
+                    </div>
+                    <div class="form-group">
+                        <label for="default-baudrate">默认波特率:</label>
+                        <input type="number" id="default-baudrate" value="115200">
+                    </div>
+                    <button id="save-serial" class="btn btn-primary">保存串口设置</button>
+                </div>
+
+                <div class="panel">
+                    <h2>Web 服务器设置</h2>
+                    <div class="form-group">
+                        <label for="web-host">监听地址:</label>
+                        <input type="text" id="web-host" value="0.0.0.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="web-port">端口:</label>
+                        <input type="number" id="web-port" value="8080">
+                    </div>
+                    <button id="save-web" class="btn btn-primary">保存 Web 设置</button>
+                </div>
+            </section>
+        </main>
+
+        <div class="panel log-panel">
+            <h2>日志 <button id="clear-logs" class="btn btn-secondary btn-small">清除</button></h2>
+            <div id="log-container" class="log-container">
+            </div>
+        </div>
+    </div>
+
+    <script src="static/script.js"></script>
+</body>
+</html>
