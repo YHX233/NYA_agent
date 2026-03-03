@@ -1,5 +1,11 @@
 # Nybble Agent
 
+[中文](#中文文档) | [English](#english-documentation)
+
+---
+
+# 中文文档
+
 Petoi Nybble 机器人智能控制代理，支持 Web UI 和 AI 对话控制。
 
 ## 功能特性
@@ -10,6 +16,7 @@ Petoi Nybble 机器人智能控制代理，支持 Web UI 和 AI 对话控制。
 - **多 API 支持** - OpenAI、Anthropic、DeepSeek、智谱、通义千问等
 - **模型扫描** - 自动扫描 API 可用模型
 - **动作控制** - 技能、步态、关节独立控制
+- **双语支持** - 中英文界面切换
 
 ## 项目结构
 
@@ -117,6 +124,7 @@ python3 main.py --host 0.0.0.0 --port 8080 --serial-port /dev/serial0 --auto-con
 - 模型扫描与选择
 - 串口配置
 - Web 服务器配置
+- 语言切换（中文/英文）
 
 ## 支持的 API 提供商
 
@@ -204,3 +212,214 @@ MIT License
 - [Petoi Nybble 官网](https://www.petoi.com/)
 - [Petoi 文档](https://docs.petoi.com/)
 - [OpenCat 项目](https://github.com/Petoi/OpenCat)
+
+---
+
+# English Documentation
+
+Intelligent control agent for Petoi Nybble robot with Web UI and AI chat control.
+
+## Features
+
+- **Web Control Interface** - Modern Web UI with mobile support
+- **Serial Communication** - Raspberry Pi GPIO serial control
+- **AI Chat Control** - Natural language robot control
+- **Multi-API Support** - OpenAI, Anthropic, DeepSeek, Zhipu, Qwen, etc.
+- **Model Scanning** - Automatic API model discovery
+- **Action Control** - Independent skill, gait, and joint control
+- **Bilingual Support** - Chinese/English interface switching
+
+## Project Structure
+
+```
+nybble_agent/
+├── main.py              # Main program entry
+├── config.py            # Configuration management
+├── serial_comm.py       # Serial communication module
+├── commands.py          # Nybble command definitions
+├── ai_service.py        # AI service module
+├── web_server.py        # Web server
+├── run.sh               # Startup script
+└── public/
+    ├── index.html       # WebUI main page
+    └── static/
+        ├── style.css    # Styles
+        └── script.js    # Frontend logic
+```
+
+## Installation
+
+```bash
+pip install pyserial openai
+```
+
+## Raspberry Pi Serial Configuration
+
+Before using on Raspberry Pi, configure GPIO serial:
+
+1. Edit `/boot/config.txt`, add:
+   ```
+   enable_uart=1
+   dtoverlay=disable-bt
+   ```
+
+2. Disable serial console:
+   ```bash
+   sudo raspi-config
+   # Interface Options -> Serial Port -> No (login shell) -> Yes (serial port hardware)
+   ```
+
+3. After reboot, serial device is `/dev/serial0` or `/dev/ttyAMA0`
+
+## Usage
+
+### Start Service
+
+```bash
+python3 main.py
+# or
+./run.sh
+```
+
+### Command Line Arguments
+
+```bash
+python3 main.py --host 0.0.0.0 --port 8080 --serial-port /dev/serial0 --auto-connect --debug
+```
+
+Arguments:
+- `--host` - Web server listen address (default: 0.0.0.0)
+- `--port` - Web server port (default: 8080)
+- `--serial-port` - Serial device path (default: /dev/serial0)
+- `--baudrate` - Baud rate (default: 115200)
+- `--auto-connect` - Auto-connect to robot on startup
+- `--debug` - Enable debug logging
+
+### Access Web UI
+
+After starting, visit `http://<raspberry-pi-ip>:8080`
+
+## WebUI Features
+
+### Control Panel
+- Serial port connect/disconnect
+- Quick motion control (forward, left, right)
+- Skill shortcut buttons (sit, stand, rest, etc.)
+- Custom command sending
+
+### AI Chat
+- Natural language robot control
+- Automatic action execution
+- Support for action sequences
+
+### Skill List
+- sit
+- balance
+- rest
+- hi
+- pu (push-up)
+- More skills...
+
+### Gait Control
+- walk
+- trot
+- crawl
+- Support for forward, left, right directions
+
+### Joint Control
+- 16 servo independent control
+- Real-time angle adjustment
+
+### Settings
+- API Key configuration
+- Model scanning and selection
+- Serial port configuration
+- Web server configuration
+- Language switching (Chinese/English)
+
+## Supported API Providers
+
+| Provider | Model Examples |
+|----------|----------------|
+| OpenAI | GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo |
+| Anthropic | Claude 3.5 Sonnet, Claude 3 Opus |
+| DeepSeek | DeepSeek Chat, DeepSeek Coder |
+| Moonshot | Moonshot V1 8K/32K/128K |
+| Zhipu AI | GLM-4, GLM-4 Flash |
+| Qwen | Qwen Turbo/Plus/Max |
+| Custom | Any OpenAI-compatible API |
+
+## Nybble Command Reference
+
+### Skill Commands
+- `ksit` - Sit down
+- `kbalance` - Balance stand
+- `krest` - Rest
+- `kbuttUp` - Butt up
+- `khi` - Say hi
+- `kpu` - Push-up
+- `kzero` - Zero position
+
+### Gait Commands
+- `kwkF` / `kwkL` / `kwkR` - Walk (forward/left/right)
+- `ktrF` / `ktrL` / `ktrR` - Trot (forward/left/right)
+- `kcrF` / `kcrL` / `kcrR` - Crawl (forward/left/right)
+
+### Joint Commands
+- `m<joint> <angle>` - Set joint angle
+- Example: `m0 30` - Turn head right 30 degrees
+
+### Calibration Commands
+- `c` - Enter calibration mode
+- `d` - Print joint angles
+- `s` - Save calibration
+
+## Configuration File
+
+Configuration saved in `config.json`:
+
+```json
+{
+  "serial": {
+    "port": "/dev/serial0",
+    "baudrate": 115200
+  },
+  "api": {
+    "provider": "openai",
+    "api_key": "",
+    "base_url": "",
+    "model": "gpt-4o"
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 8080
+  }
+}
+```
+
+## Troubleshooting
+
+### Serial Connection Failed
+- Check if serial device exists: `ls -l /dev/serial0`
+- Check permissions: `sudo usermod -a -G dialout $USER`
+- Confirm Bluetooth is disabled
+
+### AI Returns Empty Response
+- Check if API Key is correct
+- Check if model name is correct
+- Use `--debug` for detailed logs
+
+### Model Scan Failed
+- Confirm API Key is valid
+- Check network connection
+- Some APIs don't support model list endpoint
+
+## License
+
+MIT License
+
+## Related Links
+
+- [Petoi Nybble Official Site](https://www.petoi.com/)
+- [Petoi Documentation](https://docs.petoi.com/)
+- [OpenCat Project](https://github.com/Petoi/OpenCat)

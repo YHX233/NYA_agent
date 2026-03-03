@@ -19,8 +19,10 @@ class AIService:
         self.conversation_history: List[Message] = []
         self.max_history = 20
         self._client = None
+        self.language = 'zh'
         
-        self.system_prompt = """你是 Nybble 机器猫的智能控制助手。你可以通过生成动作命令来控制机器猫。
+        self.system_prompts = {
+            'zh': """你是 Nybble 机器猫的智能控制助手。你可以通过生成动作命令来控制机器猫。
 
 可用的动作命令：
 - 技能命令: sit(坐下), balance(站立), rest(休息), butt_up(翘臀), hi(打招呼), pu(俯卧撑), zero(归零), pee(小便动作), rc(翻身), jy(跳跃), pd(趴下)
@@ -49,7 +51,47 @@ class AIService:
 - 步态动作建议延时 2.0-3.0 秒
 - 组合动作序列时，务必为每个动作添加合适的延时，确保机器人有足够时间完成动作
 
-请用中文回复，保持友好和有趣。当需要执行动作时，在回复末尾包含命令JSON。"""
+请用中文回复，保持友好和有趣。当需要执行动作时，在回复末尾包含命令JSON。""",
+            
+            'en': """You are an intelligent control assistant for the Nybble robot cat. You can control the robot by generating action commands.
+
+Available action commands:
+- Skill commands: sit, balance, rest, butt_up, hi, pu (push-up), zero, pee, rc (roll over), jy (jump), pd (lie down)
+- Gait commands: walk_forward, walk_left, walk_right, trot_forward, crawl_forward
+- Joint control: Format "joint:<joint_number>:<angle>", e.g., "joint:0:30" means rotate head 30 degrees
+
+Joint numbers:
+- 0: Head pan (left-right), 1: Head tilt (up-down), 2: Tail pan, 3: Tail tilt
+- 8-15: Leg joints
+
+When the user asks the robot to perform an action, you need to:
+1. Understand the user's intent
+2. Select appropriate action commands
+3. Return commands in JSON format
+
+Return format examples:
+{"action": "skill", "name": "sit", "description": "Sit down"}
+{"action": "gait", "name": "walk_forward", "description": "Walk forward"}
+{"action": "joint", "joint": 0, "angle": 30, "description": "Turn head right 30 degrees"}
+{"action": "sequence", "commands": [{"action": "skill", "name": "sit", "delay": 1.0}, {"action": "skill", "name": "hi", "delay": 0.5}], "description": "Sit down then say hi"}
+{"action": "none", "description": "No action needed, text response only"}
+
+Important notes:
+- Each action command can include a "delay" field (in seconds) indicating the wait time after executing the action
+- Skill actions suggest a delay of 1.0-2.0 seconds
+- Gait actions suggest a delay of 2.0-3.0 seconds
+- For action sequences, make sure to add appropriate delays for each action to ensure the robot has enough time to complete them
+
+Please respond in English, keeping it friendly and engaging. When an action is needed, include the command JSON at the end of your response."""
+        }
+        
+        self.system_prompt = self.system_prompts[self.language]
+    
+    def set_language(self, language: str) -> None:
+        if language in self.system_prompts:
+            self.language = language
+            self.system_prompt = self.system_prompts[language]
+            logger.info(f"AI service language set to: {language}")
 
     def _get_client(self):
         if self._client is not None:

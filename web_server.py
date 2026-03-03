@@ -118,6 +118,8 @@ class NybbleWebServer:
                 self._handle_chat(data)
             elif parsed.path == '/api/chat/clear':
                 self._handle_chat_clear()
+            elif parsed.path == '/api/language':
+                self._handle_set_language(data)
             else:
                 self._send_error(404, 'Not Found')
         
@@ -368,6 +370,15 @@ class NybbleWebServer:
             provider = self.web_server.config.api.provider if self.web_server.config else 'openai'
             models = self.web_server.ai_service.get_provider_models(provider)
             self._send_json({'success': True, 'models': models, 'provider': provider})
+        
+        def _handle_set_language(self, data: Dict[str, Any]) -> None:
+            if not self.web_server or not self.web_server.ai_service:
+                self._send_error(500, 'AI service not initialized')
+                return
+            
+            language = data.get('language', 'zh')
+            self.web_server.ai_service.set_language(language)
+            self._send_json({'success': True, 'language': language})
         
         def log_message(self, format, *args) -> None:
             logger.debug(f"{self.address_string()} - {format % args}")

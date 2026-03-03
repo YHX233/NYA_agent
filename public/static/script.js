@@ -3,31 +3,68 @@ class NybbleAgent {
         this.connected = false;
         this.commands = { skills: {}, gaits: {} };
         this.aiConfigured = false;
+        this.language = 'zh';
         this.joints = {
-            0: { name: '头部左右', min: -90, max: 90, default: 0 },
-            1: { name: '头部上下', min: -90, max: 90, default: 0 },
-            2: { name: '尾巴左右', min: -90, max: 90, default: 0 },
-            3: { name: '尾巴上下', min: -90, max: 90, default: 0 },
-            8: { name: '左前肩', min: -90, max: 90, default: 0 },
-            9: { name: '左前肘', min: -90, max: 90, default: 0 },
-            10: { name: '右前肩', min: -90, max: 90, default: 0 },
-            11: { name: '右前肘', min: -90, max: 90, default: 0 },
-            12: { name: '左后肩', min: -90, max: 90, default: 0 },
-            13: { name: '左后肘', min: -90, max: 90, default: 0 },
-            14: { name: '右后肩', min: -90, max: 90, default: 0 },
-            15: { name: '右后肘', min: -90, max: 90, default: 0 }
+            0: { name: '头部左右', nameEn: 'Head Pan', min: -90, max: 90, default: 0 },
+            1: { name: '头部上下', nameEn: 'Head Tilt', min: -90, max: 90, default: 0 },
+            2: { name: '尾巴左右', nameEn: 'Tail Pan', min: -90, max: 90, default: 0 },
+            3: { name: '尾巴上下', nameEn: 'Tail Tilt', min: -90, max: 90, default: 0 },
+            8: { name: '左前肩', nameEn: 'Front Left Shoulder', min: -90, max: 90, default: 0 },
+            9: { name: '左前肘', nameEn: 'Front Left Elbow', min: -90, max: 90, default: 0 },
+            10: { name: '右前肩', nameEn: 'Front Right Shoulder', min: -90, max: 90, default: 0 },
+            11: { name: '右前肘', nameEn: 'Front Right Elbow', min: -90, max: 90, default: 0 },
+            12: { name: '左后肩', nameEn: 'Back Left Shoulder', min: -90, max: 90, default: 0 },
+            13: { name: '左后肘', nameEn: 'Back Left Elbow', min: -90, max: 90, default: 0 },
+            14: { name: '右后肩', nameEn: 'Back Right Shoulder', min: -90, max: 90, default: 0 },
+            15: { name: '右后肘', nameEn: 'Back Right Elbow', min: -90, max: 90, default: 0 }
         };
         this.init();
     }
 
     init() {
         this.bindEvents();
+        this.initLanguage();
         this.loadCommands();
         this.loadConfig();
         this.refreshPorts();
         this.initJoints();
         this.initChat();
         this.startLogPolling();
+    }
+
+    initLanguage() {
+        const langZh = document.getElementById('lang-zh');
+        const langEn = document.getElementById('lang-en');
+        
+        if (langZh && langEn) {
+            langZh.addEventListener('click', () => this.setLanguage('zh'));
+            langEn.addEventListener('click', () => this.setLanguage('en'));
+        }
+    }
+
+    setLanguage(lang) {
+        this.language = lang;
+        
+        document.querySelectorAll('[data-zh][data-en]').forEach(el => {
+            el.textContent = el.getAttribute(`data-${lang}`);
+        });
+        
+        document.querySelectorAll('[data-zh-placeholder][data-en-placeholder]').forEach(el => {
+            el.placeholder = el.getAttribute(`data-${lang}-placeholder`);
+        });
+        
+        document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+        document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+        
+        if (this.jointsInitialized) {
+            this.initJoints();
+        }
+        
+        fetch('/api/language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language: lang })
+        }).catch(err => console.error('Failed to set language:', err));
     }
 
     bindEvents() {
@@ -314,10 +351,11 @@ class NybbleAgent {
         container.innerHTML = '';
 
         Object.entries(this.joints).forEach(([index, joint]) => {
+            const jointName = this.language === 'en' ? joint.nameEn : joint.name;
             const div = document.createElement('div');
             div.className = 'joint-control';
             div.innerHTML = `
-                <label>${index}: ${joint.name}</label>
+                <label>${index}: ${jointName}</label>
                 <input type="range" min="${joint.min}" max="${joint.max}" value="${joint.default}" 
                        data-joint="${index}" class="joint-slider">
                 <div class="joint-value"><span class="value">${joint.default}</span>°</div>
@@ -335,6 +373,7 @@ class NybbleAgent {
                 this.sendJointCommand(parseInt(index), parseInt(e.target.value));
             });
         });
+        this.jointsInitialized = true;
     }
 
     async loadConfig() {

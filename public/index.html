@@ -3,36 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nybble Agent - Petoi 机器人控制</title>
+    <title>Nybble Agent - Petoi Robot Control</title>
     <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>🐱 Nybble Agent</h1>
-            <p class="subtitle">Petoi Nybble 机器人控制系统</p>
+            <p class="subtitle" data-zh="Petoi Nybble 机器人控制系统" data-en="Petoi Nybble Robot Control System">Petoi Nybble 机器人控制系统</p>
+            <div class="language-switch">
+                <button id="lang-zh" class="lang-btn active">中文</button>
+                <button id="lang-en" class="lang-btn">English</button>
+            </div>
         </header>
 
         <nav class="tabs">
-            <button class="tab-btn active" data-tab="control">控制面板</button>
-            <button class="tab-btn" data-tab="chat">AI 对话</button>
-            <button class="tab-btn" data-tab="skills">技能</button>
-            <button class="tab-btn" data-tab="gaits">步态</button>
-            <button class="tab-btn" data-tab="joints">关节</button>
-            <button class="tab-btn" data-tab="settings">设置</button>
+            <button class="tab-btn active" data-tab="control" data-zh="控制面板" data-en="Control Panel">控制面板</button>
+            <button class="tab-btn" data-tab="chat" data-zh="AI 对话" data-en="AI Chat">AI 对话</button>
+            <button class="tab-btn" data-tab="skills" data-zh="技能" data-en="Skills">技能</button>
+            <button class="tab-btn" data-tab="gaits" data-zh="步态" data-en="Gaits">步态</button>
+            <button class="tab-btn" data-tab="joints" data-zh="关节" data-en="Joints">关节</button>
+            <button class="tab-btn" data-tab="settings" data-zh="设置" data-en="Settings">设置</button>
         </nav>
 
         <div class="status-bar">
             <div class="status-item">
-                <span class="status-label">连接状态:</span>
-                <span id="connection-status" class="status-value disconnected">未连接</span>
+                <span class="status-label" data-zh="连接状态:" data-en="Status:">连接状态:</span>
+                <span id="connection-status" class="status-value disconnected" data-zh="未连接" data-en="Disconnected">未连接</span>
             </div>
             <div class="status-item">
-                <span class="status-label">串口:</span>
+                <span class="status-label" data-zh="串口:" data-en="Port:">串口:</span>
                 <span id="port-display" class="status-value">-</span>
             </div>
             <div class="status-item">
-                <span class="status-label">波特率:</span>
+                <span class="status-label" data-zh="波特率:" data-en="Baudrate:">波特率:</span>
                 <span id="baudrate-display" class="status-value">115200</span>
             </div>
         </div>
@@ -40,16 +44,16 @@
         <main>
             <section id="control-tab" class="tab-content active">
                 <div class="panel">
-                    <h2>连接设置</h2>
+                    <h2 data-zh="连接设置" data-en="Connection Settings">连接设置</h2>
                     <div class="form-group">
-                        <label for="port-select">串口:</label>
+                        <label for="port-select" data-zh="串口:" data-en="Port:">串口:</label>
                         <select id="port-select">
-                            <option value="">选择串口...</option>
+                            <option value="" data-zh="选择串口..." data-en="Select port...">选择串口...</option>
                         </select>
-                        <button id="refresh-ports" class="btn btn-secondary">刷新</button>
+                        <button id="refresh-ports" class="btn btn-secondary" data-zh="刷新" data-en="Refresh">刷新</button>
                     </div>
                     <div class="form-group">
-                        <label for="baudrate-select">波特率:</label>
+                        <label for="baudrate-select" data-zh="波特率:" data-en="Baudrate:">波特率:</label>
                         <select id="baudrate-select">
                             <option value="9600">9600</option>
                             <option value="57600">57600</option>
@@ -57,64 +61,64 @@
                         </select>
                     </div>
                     <div class="button-group">
-                        <button id="connect-btn" class="btn btn-primary">连接</button>
-                        <button id="disconnect-btn" class="btn btn-danger" disabled>断开</button>
+                        <button id="connect-btn" class="btn btn-primary" data-zh="连接" data-en="Connect">连接</button>
+                        <button id="disconnect-btn" class="btn btn-danger" disabled data-zh="断开" data-en="Disconnect">断开</button>
                     </div>
                 </div>
 
                 <div class="panel">
-                    <h2>快速控制</h2>
+                    <h2 data-zh="快速控制" data-en="Quick Control">快速控制</h2>
                     <div class="quick-controls">
                         <div class="control-row">
-                            <button class="btn btn-gait" data-gait="walk_forward">↑ 前进</button>
+                            <button class="btn btn-gait" data-gait="walk_forward" data-zh="↑ 前进" data-en="↑ Forward">↑ 前进</button>
                         </div>
                         <div class="control-row">
-                            <button class="btn btn-gait" data-gait="walk_left">↰ 左转</button>
-                            <button class="btn btn-skill" data-skill="balance">站立</button>
-                            <button class="btn btn-gait" data-gait="walk_right">↱ 右转</button>
+                            <button class="btn btn-gait" data-gait="walk_left" data-zh="↰ 左转" data-en="↰ Left">↰ 左转</button>
+                            <button class="btn btn-skill" data-skill="balance" data-zh="站立" data-en="Stand">站立</button>
+                            <button class="btn btn-gait" data-gait="walk_right" data-zh="↱ 右转" data-en="↱ Right">↱ 右转</button>
                         </div>
                         <div class="control-row">
-                            <button class="btn btn-gait" data-gait="trot_forward">↑ 小跑</button>
+                            <button class="btn btn-gait" data-gait="trot_forward" data-zh="↑ 小跑" data-en="↑ Trot">↑ 小跑</button>
                         </div>
                     </div>
                     <div class="quick-controls">
                         <div class="control-row">
-                            <button class="btn btn-skill" data-skill="sit">坐下</button>
-                            <button class="btn btn-skill" data-skill="rest">休息</button>
-                            <button class="btn btn-skill" data-skill="butt_up">翘臀</button>
+                            <button class="btn btn-skill" data-skill="sit" data-zh="坐下" data-en="Sit">坐下</button>
+                            <button class="btn btn-skill" data-skill="rest" data-zh="休息" data-en="Rest">休息</button>
+                            <button class="btn btn-skill" data-skill="butt_up" data-zh="翘臀" data-en="Butt Up">翘臀</button>
                         </div>
                         <div class="control-row">
-                            <button class="btn btn-skill" data-skill="hi">打招呼</button>
-                            <button class="btn btn-skill" data-skill="pu">俯卧撑</button>
-                            <button class="btn btn-skill" data-skill="zero">归零</button>
+                            <button class="btn btn-skill" data-skill="hi" data-zh="打招呼" data-en="Say Hi">打招呼</button>
+                            <button class="btn btn-skill" data-skill="pu" data-zh="俯卧撑" data-en="Push-up">俯卧撑</button>
+                            <button class="btn btn-skill" data-skill="zero" data-zh="归零" data-en="Zero">归零</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="panel">
-                    <h2>自定义命令</h2>
+                    <h2 data-zh="自定义命令" data-en="Custom Command">自定义命令</h2>
                     <div class="form-group">
-                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)">
+                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)" data-zh-placeholder="输入命令 (如: kbalance)" data-en-placeholder="Enter command (e.g., kbalance)">
                     </div>
-                    <button id="send-command" class="btn btn-primary">发送</button>
+                    <button id="send-command" class="btn btn-primary" data-zh="发送" data-en="Send">发送</button>
                 </div>
             </section>
 
             <section id="chat-tab" class="tab-content">
                 <div class="panel chat-panel">
                     <h2>
-                        🤖 AI 智能控制
+                        <span data-zh="🤖 AI 智能控制" data-en="🤖 AI Control">🤖 AI 智能控制</span>
                         <span id="ai-status" class="ai-status"></span>
-                        <button id="clear-chat" class="btn btn-secondary btn-small">清除对话</button>
+                        <button id="clear-chat" class="btn btn-secondary btn-small" data-zh="清除对话" data-en="Clear">清除对话</button>
                     </h2>
                     <div class="chat-hint">
-                        <p>与 AI 对话，让它帮你控制机器猫！试试说：</p>
+                        <p data-zh="与 AI 对话，让它帮你控制机器猫！试试说：" data-en="Chat with AI to control the robot! Try saying:">与 AI 对话，让它帮你控制机器猫！试试说：</p>
                         <div class="chat-examples">
-                            <button class="example-btn" data-msg="坐下">坐下</button>
-                            <button class="example-btn" data-msg="向前走几步">向前走</button>
-                            <button class="example-btn" data-msg="打个招呼">打招呼</button>
-                            <button class="example-btn" data-msg="做个俯卧撑">俯卧撑</button>
-                            <button class="example-btn" data-msg="先坐下，然后站起来">组合动作</button>
+                            <button class="example-btn" data-msg="坐下" data-zh="坐下" data-en="Sit down">坐下</button>
+                            <button class="example-btn" data-msg="向前走几步" data-zh="向前走" data-en="Walk forward">向前走</button>
+                            <button class="example-btn" data-msg="打个招呼" data-zh="打招呼" data-en="Say hi">打招呼</button>
+                            <button class="example-btn" data-msg="做个俯卧撑" data-zh="俯卧撑" data-en="Push-up">俯卧撑</button>
+                            <button class="example-btn" data-msg="先坐下，然后站起来" data-zh="组合动作" data-en="Combo">组合动作</button>
                         </div>
                     </div>
                     <div id="chat-messages" class="chat-messages">
