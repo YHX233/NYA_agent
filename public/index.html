@@ -123,20 +123,20 @@
                     </div>
                     <div id="chat-messages" class="chat-messages">
                         <div class="welcome-message">
-                            <p>👋 你好！我是 Nybble 的 AI 助手。</p>
-                            <p>告诉我你想让机器猫做什么，我会帮你生成相应的动作命令。</p>
+                            <p data-zh="👋 你好！我是 Nybble 的 AI 助手。" data-en="👋 Hello! I'm Nybble's AI assistant.">👋 你好！我是 Nybble 的 AI 助手。</p>
+                            <p data-zh="告诉我你想让机器猫做什么，我会帮你生成相应的动作命令。" data-en="Tell me what you want the robot to do, and I'll generate the action commands.">告诉我你想让机器猫做什么，我会帮你生成相应的动作命令。</p>
                         </div>
                     </div>
                     <div class="chat-input-area">
                         <div class="chat-options">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="auto-execute" checked>
-                                自动执行动作
+                                <span data-zh="自动执行动作" data-en="Auto-execute actions">自动执行动作</span>
                             </label>
                         </div>
                         <div class="chat-input-row">
-                            <input type="text" id="chat-input" placeholder="输入你想让机器猫做的事..." disabled>
-                            <button id="chat-send" class="btn btn-primary" disabled>发送</button>
+                            <input type="text" id="chat-input" placeholder="输入你想让机器猫做的事..." data-zh-placeholder="输入你想让机器猫做的事..." data-en-placeholder="Tell me what you want the robot to do..." disabled>
+                            <button id="chat-send" class="btn btn-primary" disabled data-zh="发送" data-en="Send">发送</button>
                         </div>
                     </div>
                 </div>
@@ -144,7 +144,7 @@
 
             <section id="skills-tab" class="tab-content">
                 <div class="panel">
-                    <h2>技能列表</h2>
+                    <h2 data-zh="技能列表" data-en="Skill List">技能列表</h2>
                     <div id="skills-grid" class="command-grid">
                     </div>
                 </div>
@@ -152,7 +152,7 @@
 
             <section id="gaits-tab" class="tab-content">
                 <div class="panel">
-                    <h2>步态列表</h2>
+                    <h2 data-zh="步态列表" data-en="Gait List">步态列表</h2>
                     <div id="gaits-grid" class="command-grid">
                     </div>
                 </div>
@@ -160,7 +160,7 @@
 
             <section id="joints-tab" class="tab-content">
                 <div class="panel">
-                    <h2>关节控制</h2>
+                    <h2 data-zh="关节控制" data-en="Joint Control">关节控制</h2>
                     <div id="joints-controls" class="joints-grid">
                     </div>
                 </div>
@@ -168,71 +168,71 @@
 
             <section id="settings-tab" class="tab-content">
                 <div class="panel">
-                    <h2>API 设置</h2>
-                    <p class="hint">配置 AI API 用于智能控制功能</p>
+                    <h2 data-zh="API 设置" data-en="API Settings">API 设置</h2>
+                    <p class="hint" data-zh="配置 AI API 用于智能控制功能" data-en="Configure AI API for intelligent control">配置 AI API 用于智能控制功能</p>
                     <div class="form-group">
-                        <label for="api-provider">提供商:</label>
+                        <label for="api-provider" data-zh="提供商:" data-en="Provider:">提供商:</label>
                         <select id="api-provider">
                             <option value="openai">OpenAI</option>
                             <option value="anthropic">Anthropic</option>
                             <option value="deepseek">DeepSeek</option>
-                            <option value="moonshot">Moonshot (月之暗面)</option>
-                            <option value="zhipu">智谱 AI</option>
-                            <option value="qwen">通义千问</option>
-                            <option value="custom">自定义</option>
+                            <option value="moonshot">Moonshot</option>
+                            <option value="zhipu">Zhipu AI</option>
+                            <option value="qwen">Qwen</option>
+                            <option value="custom" data-zh="自定义" data-en="Custom">自定义</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="api-key">API Key:</label>
-                        <input type="password" id="api-key" placeholder="输入 API Key">
+                        <input type="password" id="api-key" placeholder="输入 API Key" data-zh-placeholder="输入 API Key" data-en-placeholder="Enter API Key">
                     </div>
                     <div class="form-group">
-                        <label for="api-base-url">Base URL (可选):</label>
+                        <label for="api-base-url" data-zh="Base URL (可选):" data-en="Base URL (optional):">Base URL (可选):</label>
                         <input type="text" id="api-base-url" placeholder="https://api.openai.com/v1">
                     </div>
                     <div class="form-group">
-                        <label for="api-model">模型:</label>
+                        <label for="api-model" data-zh="模型:" data-en="Model:">模型:</label>
                         <div class="model-select-container">
                             <select id="api-model">
-                                <option value="">选择模型...</option>
+                                <option value="" data-zh="选择模型..." data-en="Select model...">选择模型...</option>
                             </select>
-                            <button id="scan-models" class="btn btn-secondary btn-small" type="button">扫描模型</button>
+                            <button id="scan-models" class="btn btn-secondary btn-small" type="button" data-zh="扫描模型" data-en="Scan Models">扫描模型</button>
                             <span id="scan-status" class="scan-status"></span>
                         </div>
                     </div>
-                    <button id="save-apikey" class="btn btn-primary">保存 API 设置</button>
+                    <button id="save-apikey" class="btn btn-primary" data-zh="保存 API 设置" data-en="Save API Settings">保存 API 设置</button>
                 </div>
 
                 <div class="panel">
-                    <h2>串口设置</h2>
+                    <h2 data-zh="串口设置" data-en="Serial Settings">串口设置</h2>
                     <div class="form-group">
-                        <label for="default-port">默认串口:</label>
+                        <label for="default-port" data-zh="默认串口:" data-en="Default Port:">默认串口:</label>
                         <input type="text" id="default-port" placeholder="/dev/serial0">
                     </div>
                     <div class="form-group">
-                        <label for="default-baudrate">默认波特率:</label>
+                        <label for="default-baudrate" data-zh="默认波特率:" data-en="Default Baudrate:">默认波特率:</label>
                         <input type="number" id="default-baudrate" value="115200">
                     </div>
-                    <button id="save-serial" class="btn btn-primary">保存串口设置</button>
+                    <button id="save-serial" class="btn btn-primary" data-zh="保存串口设置" data-en="Save Serial Settings">保存串口设置</button>
                 </div>
 
                 <div class="panel">
-                    <h2>Web 服务器设置</h2>
+                    <h2 data-zh="Web 服务器设置" data-en="Web Server Settings">Web 服务器设置</h2>
                     <div class="form-group">
-                        <label for="web-host">监听地址:</label>
+                        <label for="web-host" data-zh="监听地址:" data-en="Listen Address:">监听地址:</label>
                         <input type="text" id="web-host" value="0.0.0.0">
                     </div>
                     <div class="form-group">
-                        <label for="web-port">端口:</label>
+                        <label for="web-port" data-zh="端口:" data-en="Port:">端口:</label>
                         <input type="number" id="web-port" value="8080">
                     </div>
-                    <button id="save-web" class="btn btn-primary">保存 Web 设置</button>
+                    <button id="save-web" class="btn btn-primary" data-zh="保存 Web 设置" data-en="Save Web Settings">保存 Web 设置</button>
                 </div>
             </section>
         </main>
 
         <div class="panel log-panel">
-            <h2>日志 <button id="clear-logs" class="btn btn-secondary btn-small">清除</button></h2>
+            <h2><span data-zh="日志" data-en="Logs">日志</span> <button id="clear-logs" class="btn btn-secondary btn-small" data-zh="清除" data-en="Clear">清除</button></h2>
             <div id="log-container" class="log-container">
             </div>
         </div>
