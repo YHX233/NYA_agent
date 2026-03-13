@@ -4,6 +4,7 @@ class NybbleAgent {
         this.commands = { skills: {}, gaits: {} };
         this.aiConfigured = false;
         this.language = 'zh';
+        this.theme = 'light';
         this.jointsInitialized = false;
         this.jointsExpanded = false;
         this.joints = {
@@ -20,16 +21,186 @@ class NybbleAgent {
             14: { name: '右后肩', nameEn: 'Back Right Shoulder', min: -90, max: 90, default: 0 },
             15: { name: '右后肘', nameEn: 'Back Right Elbow', min: -90, max: 90, default: 0 }
         };
+        
+        // i18n translations
+        this.i18n = {
+            zh: {
+                selectPort: '选择串口...',
+                connect: '连接',
+                disconnect: '断开',
+                connected: '已连接',
+                disconnected: '未连接',
+                tabControl: '控制',
+                tabAI: 'AI',
+                tabSettings: '设置',
+                actionSit: '坐下',
+                actionStand: '站立',
+                actionRest: '休息',
+                actionHi: '打招呼',
+                sectionMove: '移动',
+                sectionAdvanced: '高级',
+                sectionJoints: '关节控制',
+                expand: '展开',
+                collapse: '收起',
+                placeholderCommand: '输入命令 (如: kbalance)',
+                send: '发送',
+                chatWelcome: '与 AI 对话来控制机器猫',
+                placeholderChat: '输入指令...',
+                exampleSit: '坐下',
+                exampleWalk: '向前走',
+                exampleHi: '打招呼',
+                autoExecute: '自动执行',
+                sectionAISettings: 'AI 设置',
+                labelProvider: '提供商',
+                optionCustom: '自定义',
+                selectModel: '选择模型...',
+                save: '保存',
+                sectionSerialSettings: '串口设置',
+                labelDefaultPort: '默认串口',
+                labelDefaultBaud: '默认波特率',
+                saveSerial: '保存串口设置',
+                logs: '日志',
+                clear: '清除',
+                configureAPIKey: '请先配置 API Key'
+            },
+            en: {
+                selectPort: 'Select port...',
+                connect: 'Connect',
+                disconnect: 'Disconnect',
+                connected: 'Connected',
+                disconnected: 'Disconnected',
+                tabControl: 'Control',
+                tabAI: 'AI',
+                tabSettings: 'Settings',
+                actionSit: 'Sit',
+                actionStand: 'Stand',
+                actionRest: 'Rest',
+                actionHi: 'Say Hi',
+                sectionMove: 'Movement',
+                sectionAdvanced: 'Advanced',
+                sectionJoints: 'Joint Control',
+                expand: 'Expand',
+                collapse: 'Collapse',
+                placeholderCommand: 'Enter command (e.g., kbalance)',
+                send: 'Send',
+                chatWelcome: 'Chat with AI to control the robot',
+                placeholderChat: 'Enter command...',
+                exampleSit: 'Sit down',
+                exampleWalk: 'Walk forward',
+                exampleHi: 'Say hi',
+                autoExecute: 'Auto-execute',
+                sectionAISettings: 'AI Settings',
+                labelProvider: 'Provider',
+                optionCustom: 'Custom',
+                selectModel: 'Select model...',
+                save: 'Save',
+                sectionSerialSettings: 'Serial Settings',
+                labelDefaultPort: 'Default Port',
+                labelDefaultBaud: 'Default Baudrate',
+                saveSerial: 'Save Serial Settings',
+                logs: 'Logs',
+                clear: 'Clear',
+                configureAPIKey: 'Please configure API Key first'
+            }
+        };
+        
         this.init();
     }
 
     init() {
+        this.loadTheme();
         this.bindEvents();
         this.loadCommands();
         this.loadConfig();
         this.refreshPorts();
         this.initChat();
         this.startLogPolling();
+        this.updateLanguage();
+    }
+
+    // Theme Management
+    loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        this.setTheme(savedTheme);
+    }
+
+    setTheme(theme) {
+        this.theme = theme;
+        const body = document.body;
+        const iconLight = document.getElementById('theme-icon-light');
+        const iconDark = document.getElementById('theme-icon-dark');
+        
+        if (theme === 'dark') {
+            body.classList.add('dark');
+            iconLight.classList.remove('hidden');
+            iconDark.classList.add('hidden');
+        } else {
+            body.classList.remove('dark');
+            iconLight.classList.add('hidden');
+            iconDark.classList.remove('hidden');
+        }
+        
+        localStorage.setItem('theme', theme);
+    }
+
+    toggleTheme() {
+        const newTheme = this.theme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
+    }
+
+    // Language Management
+    toggleLanguage() {
+        this.language = this.language === 'zh' ? 'en' : 'zh';
+        document.getElementById('lang-toggle').textContent = this.language === 'zh' ? 'EN' : '中文';
+        this.updateLanguage();
+    }
+
+    updateLanguage() {
+        const t = this.i18n[this.language];
+        
+        // Update all elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key]) {
+                el.textContent = t[key];
+            }
+        });
+        
+        // Update placeholders
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (t[key]) {
+                el.placeholder = t[key];
+            }
+        });
+        
+        // Update status text
+        this.updateConnectionUI(this.connected);
+        
+        // Update toggle joints button
+        const toggleBtn = document.getElementById('toggle-joints');
+        if (toggleBtn) {
+            toggleBtn.textContent = this.jointsExpanded ? t.collapse : t.expand;
+        }
+        
+        // Update chat placeholder based on AI status
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            if (this.aiConfigured) {
+                chatInput.placeholder = t.placeholderChat;
+            } else {
+                chatInput.placeholder = t.configureAPIKey;
+            }
+        }
+        
+        // Re-render joints if expanded
+        if (this.jointsExpanded && this.jointsInitialized) {
+            this.initJoints();
+        }
+    }
+
+    t(key) {
+        return this.i18n[this.language][key] || key;
     }
 
     bindEvents() {
@@ -37,6 +208,12 @@ class NybbleAgent {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
         });
+
+        // Theme toggle
+        document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
+
+        // Language toggle
+        document.getElementById('lang-toggle').addEventListener('click', () => this.toggleLanguage());
 
         // Connection
         document.getElementById('connect-btn').addEventListener('click', () => this.connect());
@@ -76,9 +253,6 @@ class NybbleAgent {
         document.getElementById('api-provider').addEventListener('change', (e) => {
             this.loadProviderModels(e.target.value);
         });
-
-        // Language toggle
-        document.getElementById('lang-toggle').addEventListener('click', () => this.toggleLanguage());
     }
 
     switchTab(tabName) {
@@ -104,114 +278,13 @@ class NybbleAgent {
         }
     }
 
-    toggleLanguage() {
-        this.language = this.language === 'zh' ? 'en' : 'zh';
-        document.getElementById('lang-toggle').textContent = this.language === 'zh' ? 'EN' : '中文';
-        this.updateUILanguage();
-    }
-
-    updateUILanguage() {
-        const texts = {
-            zh: {
-                connect: '连接',
-                disconnect: '断开',
-                connected: '已连接',
-                disconnected: '未连接',
-                control: '控制',
-                chat: 'AI',
-                settings: '设置',
-                sit: '坐下',
-                balance: '站立',
-                rest: '休息',
-                hi: '打招呼',
-                move: '移动',
-                advanced: '高级',
-                joints: '关节控制',
-                expand: '展开',
-                collapse: '收起',
-                aiSettings: 'AI 设置',
-                serialSettings: '串口设置',
-                save: '保存',
-                logs: '日志',
-                clear: '清除',
-                placeholder: '输入命令 (如: kbalance)',
-                chatPlaceholder: '输入指令...',
-                chatWelcome: '与 AI 对话来控制机器猫'
-            },
-            en: {
-                connect: 'Connect',
-                disconnect: 'Disconnect',
-                connected: 'Connected',
-                disconnected: 'Disconnected',
-                control: 'Control',
-                chat: 'AI',
-                settings: 'Settings',
-                sit: 'Sit',
-                balance: 'Stand',
-                rest: 'Rest',
-                hi: 'Say Hi',
-                move: 'Move',
-                advanced: 'Advanced',
-                joints: 'Joints',
-                expand: 'Expand',
-                collapse: 'Collapse',
-                aiSettings: 'AI Settings',
-                serialSettings: 'Serial Settings',
-                save: 'Save',
-                logs: 'Logs',
-                clear: 'Clear',
-                placeholder: 'Enter command (e.g., kbalance)',
-                chatPlaceholder: 'Enter command...',
-                chatWelcome: 'Chat with AI to control the robot'
-            }
-        };
-
-        const t = texts[this.language];
-
-        document.getElementById('connect-btn').textContent = t.connect;
-        document.getElementById('disconnect-btn').textContent = t.disconnect;
-        document.getElementById('status-text').textContent = this.connected ? t.connected : t.disconnected;
-        document.querySelector('.tab-btn[data-tab="control"]').textContent = t.control;
-        document.querySelector('.tab-btn[data-tab="chat"]').textContent = t.chat;
-        document.querySelector('.tab-btn[data-tab="settings"]').textContent = t.settings;
-        document.getElementById('custom-command').placeholder = t.placeholder;
-        document.getElementById('chat-input').placeholder = t.chatPlaceholder;
-        document.querySelector('#chat-tab .text-center p').textContent = t.chatWelcome;
-
-        // Update action button labels
-        const actions = ['sit', 'balance', 'rest', 'hi'];
-        actions.forEach(action => {
-            const btn = document.querySelector(`[data-action="${action}"]`);
-            if (btn) btn.querySelector('.font-medium').textContent = t[action];
-        });
-
-        // Update section headers
-        document.querySelector('#control-tab h3:nth-of-type(1)').textContent = t.move;
-        document.querySelector('#control-tab h3:nth-of-type(2)').textContent = t.advanced;
-        document.querySelector('#control-tab h3:nth-of-type(3)').textContent = t.joints;
-        document.getElementById('toggle-joints').textContent = this.jointsExpanded ? t.collapse : t.expand;
-
-        // Update settings headers
-        document.querySelector('#settings-tab h3:nth-of-type(1)').textContent = t.aiSettings;
-        document.querySelector('#settings-tab h3:nth-of-type(2)').textContent = t.serialSettings;
-
-        // Update logs
-        document.querySelector('.text-xs.font-medium').textContent = t.logs;
-        document.getElementById('clear-logs').textContent = t.clear;
-
-        // Re-render joints if expanded
-        if (this.jointsExpanded) {
-            this.initJoints();
-        }
-    }
-
     async refreshPorts() {
         try {
             const response = await fetch('/api/ports');
             if (!response.ok) throw new Error('API not available');
             const data = await response.json();
             const select = document.getElementById('port-select');
-            select.innerHTML = '<option value="">选择串口...</option>';
+            select.innerHTML = `<option value="">${this.t('selectPort')}</option>`;
 
             data.ports.forEach(port => {
                 const option = document.createElement('option');
@@ -220,10 +293,10 @@ class NybbleAgent {
                 select.appendChild(option);
             });
 
-            this.addLog('已刷新串口列表');
+            this.addLog(this.t('selectPort'));
         } catch (error) {
             const select = document.getElementById('port-select');
-            select.innerHTML = '<option value="">选择串口...</option>';
+            select.innerHTML = `<option value="">${this.t('selectPort')}</option>`;
 
             const mockPorts = [
                 { device: '/dev/ttyUSB0', description: 'USB Serial Port' },
@@ -246,7 +319,7 @@ class NybbleAgent {
         const baudrate = parseInt(document.getElementById('baudrate-select').value);
 
         if (!port) {
-            this.addLog('请选择串口', true);
+            this.addLog(this.language === 'zh' ? '请选择串口' : 'Please select port', true);
             return;
         }
 
@@ -261,12 +334,12 @@ class NybbleAgent {
             if (response.ok) {
                 this.connected = true;
                 this.updateConnectionUI(true);
-                this.addLog(`已连接到 ${port} @ ${baudrate}`);
+                this.addLog(`${this.t('connected')} ${port} @ ${baudrate}`);
             } else {
-                this.addLog('连接失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '连接失败: ' : 'Connection failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('连接失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '连接失败: ' : 'Connection failed: ' + error.message, true);
         }
     }
 
@@ -275,9 +348,9 @@ class NybbleAgent {
             await fetch('/api/disconnect', { method: 'POST' });
             this.connected = false;
             this.updateConnectionUI(false);
-            this.addLog('已断开连接');
+            this.addLog(this.t('disconnected'));
         } catch (error) {
-            this.addLog('断开连接失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '断开连接失败: ' : 'Disconnect failed: ' + error.message, true);
         }
     }
 
@@ -290,7 +363,7 @@ class NybbleAgent {
         if (connected) {
             statusDot.classList.remove('bg-gray-300');
             statusDot.classList.add('bg-green-500');
-            statusText.textContent = this.language === 'zh' ? '已连接' : 'Connected';
+            statusText.textContent = this.t('connected');
             statusText.classList.remove('text-gray-500');
             statusText.classList.add('text-green-600');
             connectBtn.classList.add('hidden');
@@ -298,7 +371,7 @@ class NybbleAgent {
         } else {
             statusDot.classList.remove('bg-green-500');
             statusDot.classList.add('bg-gray-300');
-            statusText.textContent = this.language === 'zh' ? '未连接' : 'Disconnected';
+            statusText.textContent = this.t('disconnected');
             statusText.classList.remove('text-green-600');
             statusText.classList.add('text-gray-500');
             connectBtn.classList.remove('hidden');
@@ -316,7 +389,7 @@ class NybbleAgent {
 
     async sendRawCommand(command) {
         if (!this.connected) {
-            this.addLog('未连接到机器人', true);
+            this.addLog(this.language === 'zh' ? '未连接到机器人' : 'Not connected to robot', true);
             return;
         }
 
@@ -329,18 +402,18 @@ class NybbleAgent {
             const data = await response.json();
 
             if (response.ok) {
-                this.addLog(`发送: ${command}`);
+                this.addLog(`${this.t('send')}: ${command}`);
             } else {
-                this.addLog('发送失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '发送失败: ' : 'Send failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('发送失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '发送失败: ' : 'Send failed: ' + error.message, true);
         }
     }
 
     async sendSkill(skill) {
         if (!this.connected) {
-            this.addLog('未连接到机器人', true);
+            this.addLog(this.language === 'zh' ? '未连接到机器人' : 'Not connected to robot', true);
             return;
         }
 
@@ -353,18 +426,18 @@ class NybbleAgent {
             const data = await response.json();
 
             if (response.ok) {
-                this.addLog(`技能: ${skill}`);
+                this.addLog(`Skill: ${skill}`);
             } else {
-                this.addLog('发送技能失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '发送技能失败: ' : 'Send skill failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('发送技能失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '发送技能失败: ' : 'Send skill failed: ' + error.message, true);
         }
     }
 
     async sendGait(gait) {
         if (!this.connected) {
-            this.addLog('未连接到机器人', true);
+            this.addLog(this.language === 'zh' ? '未连接到机器人' : 'Not connected to robot', true);
             return;
         }
 
@@ -377,12 +450,12 @@ class NybbleAgent {
             const data = await response.json();
 
             if (response.ok) {
-                this.addLog(`步态: ${gait}`);
+                this.addLog(`Gait: ${gait}`);
             } else {
-                this.addLog('发送步态失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '发送步态失败: ' : 'Send gait failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('发送步态失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '发送步态失败: ' : 'Send gait failed: ' + error.message, true);
         }
     }
 
@@ -393,13 +466,13 @@ class NybbleAgent {
 
         if (this.jointsExpanded) {
             container.classList.remove('hidden');
-            toggleBtn.textContent = this.language === 'zh' ? '收起' : 'Collapse';
+            toggleBtn.textContent = this.t('collapse');
             if (!this.jointsInitialized) {
                 this.initJoints();
             }
         } else {
             container.classList.add('hidden');
-            toggleBtn.textContent = this.language === 'zh' ? '展开' : 'Expand';
+            toggleBtn.textContent = this.t('expand');
         }
     }
 
@@ -435,7 +508,7 @@ class NybbleAgent {
 
     async sendJointCommand(joint, angle) {
         if (!this.connected) {
-            this.addLog('未连接到机器人', true);
+            this.addLog(this.language === 'zh' ? '未连接到机器人' : 'Not connected to robot', true);
             return;
         }
 
@@ -448,12 +521,12 @@ class NybbleAgent {
             const data = await response.json();
 
             if (response.ok) {
-                this.addLog(`关节 ${joint}: ${angle}°`);
+                this.addLog(`Joint ${joint}: ${angle}°`);
             } else {
-                this.addLog('关节控制失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '关节控制失败: ' : 'Joint control failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('关节控制失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '关节控制失败: ' : 'Joint control failed: ' + error.message, true);
         }
     }
 
@@ -509,7 +582,7 @@ class NybbleAgent {
         const modelSelect = document.getElementById('api-model');
         if (!modelSelect) return;
 
-        modelSelect.innerHTML = '<option value="">选择模型...</option>';
+        modelSelect.innerHTML = `<option value="">${this.t('selectModel')}</option>`;
 
         const defaultModels = {
             'openai': [
@@ -569,13 +642,13 @@ class NybbleAgent {
             const data = await response.json();
 
             if (response.ok) {
-                this.addLog('API 设置已保存');
+                this.addLog(this.language === 'zh' ? 'API 设置已保存' : 'API settings saved');
                 this.checkAIStatus();
             } else {
-                this.addLog('保存失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '保存失败: ' : 'Save failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('保存失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '保存失败: ' : 'Save failed: ' + error.message, true);
         }
     }
 
@@ -592,12 +665,12 @@ class NybbleAgent {
             const data = await response.json();
 
             if (response.ok) {
-                this.addLog('串口设置已保存');
+                this.addLog(this.language === 'zh' ? '串口设置已保存' : 'Serial settings saved');
             } else {
-                this.addLog('保存失败: ' + (data.error || '未知错误'), true);
+                this.addLog(this.language === 'zh' ? '保存失败: ' : 'Save failed: ' + (data.error || 'Unknown error'), true);
             }
         } catch (error) {
-            this.addLog('保存失败: ' + error.message, true);
+            this.addLog(this.language === 'zh' ? '保存失败: ' : 'Save failed: ' + error.message, true);
         }
     }
 
@@ -606,7 +679,7 @@ class NybbleAgent {
         const entry = document.createElement('div');
         entry.className = 'log-entry';
 
-        const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        const time = new Date().toLocaleTimeString(this.language === 'zh' ? 'zh-CN' : 'en-US', { hour12: false });
         entry.innerHTML = `<span class="log-time">[${time}]</span><span class="log-message ${isError ? 'error' : ''}">${message}</span>`;
         container.appendChild(entry);
         container.scrollTop = container.scrollHeight;
@@ -619,7 +692,7 @@ class NybbleAgent {
 
     async clearLogs() {
         document.getElementById('log-container').innerHTML = '';
-        this.addLog('日志已清除');
+        this.addLog(this.language === 'zh' ? '日志已清除' : 'Logs cleared');
     }
 
     startLogPolling() {
@@ -685,14 +758,14 @@ class NybbleAgent {
             if (data.configured) {
                 chatInput.disabled = false;
                 chatSend.disabled = false;
-                chatInput.placeholder = this.language === 'zh' ? '输入指令...' : 'Enter command...';
+                chatInput.placeholder = this.t('placeholderChat');
             } else {
                 chatInput.disabled = true;
                 chatSend.disabled = true;
-                chatInput.placeholder = this.language === 'zh' ? '请先配置 API Key' : 'Please configure API Key first';
+                chatInput.placeholder = this.t('configureAPIKey');
             }
         } catch (error) {
-            console.error('检查 AI 状态失败:', error);
+            console.error('Check AI status failed:', error);
         }
     }
 
@@ -702,7 +775,7 @@ class NybbleAgent {
 
         if (!message) return;
         if (!this.aiConfigured) {
-            this.addChatMessage('assistant', this.language === 'zh' ? '请先配置 API Key' : 'Please configure API Key first');
+            this.addChatMessage('assistant', this.t('configureAPIKey'));
             return;
         }
 
@@ -734,11 +807,11 @@ class NybbleAgent {
                     if (action.description) {
                         actionText = action.description;
                     } else if (action.action === 'skill') {
-                        actionText = `技能: ${action.name}`;
+                        actionText = this.language === 'zh' ? `技能: ${action.name}` : `Skill: ${action.name}`;
                     } else if (action.action === 'gait') {
-                        actionText = `步态: ${action.name}`;
+                        actionText = this.language === 'zh' ? `步态: ${action.name}` : `Gait: ${action.name}`;
                     } else if (action.action === 'joint') {
-                        actionText = `关节 ${action.joint}: ${action.angle}°`;
+                        actionText = this.language === 'zh' ? `关节 ${action.joint}: ${action.angle}°` : `Joint ${action.joint}: ${action.angle}°`;
                     }
 
                     if (actionText) {
@@ -749,13 +822,13 @@ class NybbleAgent {
                 this.addChatMessage('assistant', content, actionInfo);
                 this.addLog(`AI: ${message}`);
             } else {
-                this.addChatMessage('assistant', data.message, '<div class="action-badge error">✗ 错误</div>');
-                this.addLog('AI 请求失败: ' + data.message, true);
+                this.addChatMessage('assistant', data.message, '<div class="action-badge error">✗ Error</div>');
+                this.addLog('AI request failed: ' + data.message, true);
             }
         } catch (error) {
             this.removeThinkingMessage(thinkingId);
-            this.addChatMessage('assistant', '请求失败: ' + error.message, '<div class="action-badge error">✗ 错误</div>');
-            this.addLog('AI 请求失败: ' + error.message, true);
+            this.addChatMessage('assistant', 'Request failed: ' + error.message, '<div class="action-badge error">✗ Error</div>');
+            this.addLog('AI request failed: ' + error.message, true);
         }
     }
 
@@ -778,6 +851,7 @@ class NybbleAgent {
     addThinkingMessage() {
         const container = document.getElementById('chat-messages');
         const id = 'thinking-' + Date.now();
+        const thinkingText = this.language === 'zh' ? '思考中...' : 'Thinking...';
 
         const msg = document.createElement('div');
         msg.className = 'chat-message assistant';
@@ -787,7 +861,7 @@ class NybbleAgent {
                 <div class="thinking-dots">
                     <span></span><span></span><span></span>
                 </div>
-                <span>思考中...</span>
+                <span>${thinkingText}</span>
             </div>
         `;
 

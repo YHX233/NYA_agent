@@ -5,28 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nybble Agent</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-50 text-gray-900 font-light">
+<body class="bg-gray-50 text-gray-900 font-light transition-colors duration-300">
     <div class="min-h-screen flex flex-col">
         <!-- Header -->
-        <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <header class="bg-white border-b border-gray-200 px-6 py-4 transition-colors duration-300">
             <div class="max-w-5xl mx-auto flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white text-sm font-medium">
+                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white text-sm font-medium transition-colors duration-300">
                         N
                     </div>
                     <span class="text-lg font-medium tracking-tight">Nybble Agent</span>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 text-sm">
-                        <span class="w-2 h-2 rounded-full bg-gray-300" id="status-dot"></span>
-                        <span class="text-gray-500" id="status-text">未连接</span>
-                    </div>
-                    <button id="lang-toggle" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                <div class="flex items-center gap-3">
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all" title="切换主题">
+                        <svg id="theme-icon-light" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        <svg id="theme-icon-dark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </button>
+                    <!-- Language Toggle -->
+                    <button id="lang-toggle" class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all font-medium">
                         EN
                     </button>
+                    <div class="flex items-center gap-2 text-sm ml-2 pl-3 border-l border-gray-200">
+                        <span class="w-2 h-2 rounded-full bg-gray-300 transition-colors duration-300" id="status-dot"></span>
+                        <span class="text-gray-500" id="status-text">未连接</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -34,30 +67,30 @@
         <!-- Main Content -->
         <main class="flex-1 max-w-5xl mx-auto w-full p-6">
             <!-- Connection Bar -->
-            <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+            <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6 transition-colors duration-300">
                 <div class="flex items-center gap-4 flex-wrap">
                     <select id="port-select" class="flex-1 min-w-[200px] bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
-                        <option value="">选择串口...</option>
+                        <option value="" data-i18n="selectPort">选择串口...</option>
                     </select>
                     <select id="baudrate-select" class="w-32 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
                         <option value="9600">9600</option>
                         <option value="57600">57600</option>
                         <option value="115200" selected>115200</option>
                     </select>
-                    <button id="connect-btn" class="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                    <button id="connect-btn" class="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors" data-i18n="connect">
                         连接
                     </button>
-                    <button id="disconnect-btn" class="px-6 py-2 bg-white text-gray-700 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors hidden">
+                    <button id="disconnect-btn" class="px-6 py-2 bg-white text-gray-700 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors hidden" data-i18n="disconnect">
                         断开
                     </button>
                 </div>
             </div>
 
             <!-- Tab Navigation -->
-            <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-                <button class="tab-btn active px-4 py-2 text-sm font-medium rounded-md transition-all" data-tab="control">控制</button>
-                <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-700" data-tab="chat">AI</button>
-                <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-700" data-tab="settings">设置</button>
+            <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit transition-colors duration-300">
+                <button class="tab-btn active px-4 py-2 text-sm font-medium rounded-md transition-all" data-tab="control" data-i18n="tabControl">控制</button>
+                <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-700" data-tab="chat" data-i18n="tabAI">AI</button>
+                <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-700" data-tab="settings" data-i18n="tabSettings">设置</button>
             </div>
 
             <!-- Control Tab -->
@@ -66,25 +99,25 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="sit">
                         <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">🪑</div>
-                        <div class="text-sm font-medium">坐下</div>
+                        <div class="text-sm font-medium" data-i18n="actionSit">坐下</div>
                     </button>
                     <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="balance">
                         <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">⚖️</div>
-                        <div class="text-sm font-medium">站立</div>
+                        <div class="text-sm font-medium" data-i18n="actionStand">站立</div>
                     </button>
                     <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="rest">
                         <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">😴</div>
-                        <div class="text-sm font-medium">休息</div>
+                        <div class="text-sm font-medium" data-i18n="actionRest">休息</div>
                     </button>
                     <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="hi">
                         <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">👋</div>
-                        <div class="text-sm font-medium">打招呼</div>
+                        <div class="text-sm font-medium" data-i18n="actionHi">打招呼</div>
                     </button>
                 </div>
 
                 <!-- Movement -->
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">移动</h3>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 transition-colors duration-300">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4" data-i18n="sectionMove">移动</h3>
                     <div class="flex justify-center">
                         <div class="grid grid-cols-3 gap-2">
                             <div></div>
@@ -101,22 +134,22 @@
                 </div>
 
                 <!-- Advanced -->
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">高级</h3>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 transition-colors duration-300">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4" data-i18n="sectionAdvanced">高级</h3>
                     <div class="flex gap-3">
-                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)" 
+                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)" data-i18n-placeholder="placeholderCommand"
                             class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors">
-                        <button id="send-command" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        <button id="send-command" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors" data-i18n="send">
                             发送
                         </button>
                     </div>
                 </div>
 
                 <!-- Joints -->
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <div class="bg-white rounded-xl border border-gray-200 p-6 transition-colors duration-300">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider">关节控制</h3>
-                        <button id="toggle-joints" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                        <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider" data-i18n="sectionJoints">关节控制</h3>
+                        <button id="toggle-joints" class="text-sm text-gray-400 hover:text-gray-600 transition-colors" data-i18n="expand">
                             展开
                         </button>
                     </div>
@@ -130,28 +163,28 @@
 
             <!-- Chat Tab -->
             <section id="chat-tab" class="tab-content hidden">
-                <div class="bg-white rounded-xl border border-gray-200 h-[500px] flex flex-col">
+                <div class="bg-white rounded-xl border border-gray-200 h-[500px] flex flex-col transition-colors duration-300">
                     <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
                         <div class="text-center text-gray-400 text-sm py-8">
-                            <p>与 AI 对话来控制机器猫</p>
+                            <p data-i18n="chatWelcome">与 AI 对话来控制机器猫</p>
                             <div class="flex gap-2 justify-center mt-4 flex-wrap">
-                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="坐下">坐下</button>
-                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="向前走">向前走</button>
-                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="打个招呼">打招呼</button>
+                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="坐下" data-i18n="exampleSit">坐下</button>
+                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="向前走" data-i18n="exampleWalk">向前走</button>
+                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="打个招呼" data-i18n="exampleHi">打招呼</button>
                             </div>
                         </div>
                     </div>
                     <div class="border-t border-gray-200 p-4">
                         <div class="flex gap-3">
-                            <input type="text" id="chat-input" placeholder="输入指令..." disabled
+                            <input type="text" id="chat-input" placeholder="输入指令..." disabled data-i18n-placeholder="placeholderChat"
                                 class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors">
-                            <button id="chat-send" disabled class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button id="chat-send" disabled class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="send">
                                 发送
                             </button>
                         </div>
                         <label class="flex items-center gap-2 mt-3 text-sm text-gray-500">
                             <input type="checkbox" id="auto-execute" checked class="rounded border-gray-300">
-                            <span>自动执行</span>
+                            <span data-i18n="autoExecute">自动执行</span>
                         </label>
                     </div>
                 </div>
@@ -160,11 +193,11 @@
             <!-- Settings Tab -->
             <section id="settings-tab" class="tab-content hidden space-y-6">
                 <!-- AI Settings -->
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">AI 设置</h3>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 transition-colors duration-300">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4" data-i18n="sectionAISettings">AI 设置</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm text-gray-600 mb-2">提供商</label>
+                            <label class="block text-sm text-gray-600 mb-2" data-i18n="labelProvider">提供商</label>
                             <select id="api-provider" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
                                 <option value="openai">OpenAI</option>
                                 <option value="anthropic">Anthropic</option>
@@ -172,7 +205,7 @@
                                 <option value="moonshot">Moonshot</option>
                                 <option value="zhipu">Zhipu AI</option>
                                 <option value="qwen">Qwen</option>
-                                <option value="custom">自定义</option>
+                                <option value="custom" data-i18n="optionCustom">自定义</option>
                             </select>
                         </div>
                         <div>
@@ -182,9 +215,9 @@
                         </div>
                         <div class="flex gap-3">
                             <select id="api-model" class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
-                                <option value="">选择模型...</option>
+                                <option value="" data-i18n="selectModel">选择模型...</option>
                             </select>
-                            <button id="save-apikey" class="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                            <button id="save-apikey" class="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors" data-i18n="save">
                                 保存
                             </button>
                         </div>
@@ -192,21 +225,21 @@
                 </div>
 
                 <!-- Serial Settings -->
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">串口设置</h3>
+                <div class="bg-white rounded-xl border border-gray-200 p-6 transition-colors duration-300">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4" data-i18n="sectionSerialSettings">串口设置</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm text-gray-600 mb-2">默认串口</label>
+                            <label class="block text-sm text-gray-600 mb-2" data-i18n="labelDefaultPort">默认串口</label>
                             <input type="text" id="default-port" placeholder="/dev/ttyUSB0"
                                 class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600 mb-2">默认波特率</label>
+                            <label class="block text-sm text-gray-600 mb-2" data-i18n="labelDefaultBaud">默认波特率</label>
                             <input type="number" id="default-baudrate" value="115200"
                                 class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
                         </div>
                     </div>
-                    <button id="save-serial" class="mt-4 px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                    <button id="save-serial" class="mt-4 px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors" data-i18n="saveSerial">
                         保存串口设置
                     </button>
                 </div>
@@ -214,11 +247,11 @@
         </main>
 
         <!-- Log Panel -->
-        <div class="border-t border-gray-200 bg-white">
+        <div class="border-t border-gray-200 bg-white transition-colors duration-300">
             <div class="max-w-5xl mx-auto px-6 py-4">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">日志</span>
-                    <button id="clear-logs" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">清除</button>
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="logs">日志</span>
+                    <button id="clear-logs" class="text-xs text-gray-400 hover:text-gray-600 transition-colors" data-i18n="clear">清除</button>
                 </div>
                 <div id="log-container" class="h-24 overflow-y-auto text-xs font-mono text-gray-500 space-y-1">
                 </div>
