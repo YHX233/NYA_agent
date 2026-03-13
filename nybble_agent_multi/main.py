@@ -28,6 +28,8 @@ class NybbleAgent:
         self.running = False
         self.robot_id = robot_id
         self.role = role
+        self._voltage_monitor_thread: threading.Thread = None
+        self._voltage_monitor_running = False
     
     def setup_serial(self) -> bool:
         self.serial_comm = SerialCommunication(
@@ -84,12 +86,21 @@ class NybbleAgent:
             host=self.config.web.host,
             port=self.config.web.port
         )
-        
+
         self.web_server.set_serial_comm(self.serial_comm)
         self.web_server.set_config(self.config)
         self.web_server.set_robot_manager(self.robot_manager)
-        
+        # 设置连接成功回调，用于启动电压监控
+        self.web_server.set_connect_callback(self._on_serial_connected)
+
         return self.web_server.start()
+
+    def _on_serial_connected(self) -> None:
+        """串口连接成功后的回调"""
+        logger.info("Serial connected callback triggered")
+        # 启动电压监控（如果还没启动）
+        if not self._voltage_monitor_running:
+            self._start_voltage_monitor(interval=30.0)
     
     def start(self, auto_connect: bool = False) -> bool:
         logger.info("Starting Nybble Agent (Multi-Robot Edition)...")
@@ -114,9 +125,11 @@ class NybbleAgent:
                 logger.info("Auto-connect successful")
                 # Update robot status
                 self.robot_manager.update_robot_status(
-                    self.robot_manager.my_robot_id, 
+                    self.robot_manager.my_robot_id,
                     RobotStatus.ONLINE
                 )
+                # 启动电压监控
+                self._start_voltage_monitor(interval=30.0)
             else:
                 logger.warning("Auto-connect failed, please connect manually via WebUI")
         
@@ -139,17 +152,82 @@ class NybbleAgent:
     
     def stop(self) -> None:
         self.running = False
-        
+        self._stop_voltage_monitor()
+
         if self.robot_manager:
             self.robot_manager.stop_health_monitoring()
-        
+
         if self.serial_comm:
             self.serial_comm.disconnect()
-        
+
         if self.web_server:
             self.web_server.stop()
-        
+
         logger.info("Nybble Agent stopped")
+
+    def _start_voltage_monitor(self, interval: float = 30.0) -> None:
+        """启动电压监控线程，定期读取电压"""
+        if self._voltage_monitor_running:
+            return
+
+        self._voltage_monitor_running = True
+        self._voltage_monitor_thread = threading.Thread(
+            target=self._voltage_monitor_loop,
+            args=(interval,),
+            daemon=True
+        )
+        self._voltage_monitor_thread.start()
+        logger.info(f"Voltage monitoring started (interval: {interval}s)")
+
+    def _stop_voltage_monitor(self) -> None:
+        """停止电压监控"""
+        self._voltage_monitor_running = False
+        if self._voltage_monitor_thread:
+            self._voltage_monitor_thread.join(timeout=2.0)
+        logger.info("Voltage monitoring stopped")
+
+    def _voltage_monitor_loop(self, interval: float) -> None:
+        """电压监控循环"""
+        # 等待串口连接
+        wait_count = 0
+        while self._voltage_monitor_running and wait_count < 30:
+            if self.serial_comm and self.serial_comm.is_connected():
+                break
+            time.sleep(1)
+            wait_count += 1
+
+        if not self.serial_comm or not self.serial_comm.is_connected():
+            logger.warning("Voltage monitor: Serial port not connected, stopping monitor")
+            self._voltage_monitor_running = False
+            return
+
+        logger.info("Voltage monitor: Starting to read voltage")
+
+        while self._voltage_monitor_running:
+            try:
+                if self.serial_comm and self.serial_comm.is_connected():
+                    voltage = self.serial_comm.read_voltage()
+                    if voltage is not None:
+                        # 更新机器人管理器中的电池电量（根据电压估算）
+                        if self.robot_manager:
+                            # 将电压映射到电池百分比 (6.0V = 0%, 8.4V = 100%)
+                            battery_percent = min(100, max(0, (voltage - 6.0) / 2.4 * 100))
+                            self_robot = self.robot_manager.get_robot(self.robot_manager.my_robot_id)
+                            if self_robot:
+                                self_robot.battery_level = battery_percent
+                                logger.debug(f"Battery level updated: {battery_percent:.1f}%")
+                else:
+                    logger.debug("Voltage monitor: Serial not connected, skipping read")
+
+                # 等待下一次读取
+                for _ in range(int(interval)):
+                    if not self._voltage_monitor_running:
+                        break
+                    time.sleep(1)
+
+            except Exception as e:
+                logger.error(f"Voltage monitor error: {e}")
+                time.sleep(5)  # 出错后等待5秒再试
     
     def send_command(self, command: str) -> bool:
         if not self.serial_comm or not self.serial_comm.is_connected():

@@ -39,7 +39,9 @@ class NybbleAgent:
     
     def _handle_response(self, response: str) -> None:
         logger.debug(f"Robot response: {response}")
-    
+        
+        if self.web_server:
+            self.web_server._handle_serial_response(response)
     def setup_web_server(self) -> bool:
         self.web_server = NybbleWebServer(
             host=self.config.web.host,

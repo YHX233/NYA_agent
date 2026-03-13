@@ -4,6 +4,7 @@ import serial.tools.list_ports
 import threading
 import time
 import logging
+import struct
 from typing import Optional, Callable, List, Dict, Any
 from dataclasses import dataclass
 
@@ -16,6 +17,8 @@ class SerialStatus:
     baudrate: int = 115200
     bytes_available: int = 0
     last_error: str = ""
+    voltage: float = 0.0  # 当前电压值
+    last_voltage_read: float = 0.0  # 上次读取电压的时间戳
 
 class SerialCommunication:
     def __init__(self, port: str = "/dev/serial0", baudrate: int = 115200, 
@@ -177,8 +180,92 @@ class SerialCommunication:
             'connected': self.status.connected,
             'port': self.status.port,
             'baudrate': self.status.baudrate,
-            'last_error': self.status.last_error
+            'last_error': self.status.last_error,
+            'voltage': self.status.voltage,
+            'last_voltage_read': self.status.last_voltage_read
         }
+
+    def read_voltage(self, voltage_pin: int = 21) -> Optional[float]:
+        """
+        读取机器人电压值（ADC值转换为电压）
+        
+        Args:
+            voltage_pin: ADC引脚号，V1.0+ 使用 A7 (引脚21)
+        
+        Returns:
+            电压值（伏特），失败返回 None
+        """
+        with self._lock:
+            if not self.serial_conn or not self.serial_conn.is_open:
+                logger.error("Serial port not connected")
+                return None
+            
+            try:
+                # 清空接收缓冲区
+                self.serial_conn.reset_input_buffer()
+                
+                # 构建二进制读取命令: 'R' + 类型('a'=模拟) + 引脚号 + '~'
+                # 格式参考 ardSerial.py 的 serialWriteNumToByte 函数
+                command = b'R' + bytes([ord('a'), voltage_pin]) + b'~'
+                
+                self.serial_conn.write(command)
+                self.serial_conn.flush()
+                logger.debug(f"Sent voltage read command for pin {voltage_pin}")
+                
+                # 等待并读取响应
+                start_time = time.time()
+                response_data = b''
+                
+                while time.time() - start_time < 2.0:  # 2秒超时
+                    if self.serial_conn.in_waiting > 0:
+                        data = self.serial_conn.read(self.serial_conn.in_waiting)
+                        response_data += data
+                        
+                        # 检查是否收到完整响应（以~结尾）
+                        if b'~' in response_data:
+                            break
+                    time.sleep(0.01)
+                
+                if len(response_data) >= 2:
+                    # 解析ADC值（第一个字节是高位，第二个是低位）
+                    adc_value = response_data[0] * 256 + response_data[1]
+                    
+                    # 转换为电压：根据固件代码，电压 = ADC值 / 99.0
+                    voltage = adc_value / 99.0
+                    
+                    self.status.voltage = voltage
+                    self.status.last_voltage_read = time.time()
+                    
+                    logger.info(f"Voltage read: ADC={adc_value}, Voltage={voltage:.2f}V")
+                    return voltage
+                else:
+                    logger.warning(f"Invalid voltage response: {response_data.hex()}")
+                    return None
+                    
+            except serial.SerialException as e:
+                self.status.last_error = str(e)
+                logger.error(f"Voltage read error: {e}")
+                return None
+            except Exception as e:
+                self.status.last_error = str(e)
+                logger.error(f"Unexpected error reading voltage: {e}")
+                return None
+
+    @staticmethod
+    def adc_to_volts(adc_value: int, board_version: str = 'V1.0') -> float:
+        """
+        将ADC值转换为电压
+        
+        Args:
+            adc_value: ADC原始值
+            board_version: 板子版本，'V0.1'/'V0.2' 使用 A0, 'V1.0+' 使用 A7
+        
+        Returns:
+            电压值（伏特）
+        """
+        # 根据固件代码中的计算方式
+        volts = adc_value / 99.0
+        return volts
     
     def __enter__(self):
         self.connect()

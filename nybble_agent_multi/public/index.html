@@ -19,6 +19,7 @@
 
         <nav class="tabs">
             <button class="tab-btn active" data-tab="control" data-zh="控制面板" data-en="Control Panel">控制面板</button>
+            <button class="tab-btn" data-tab="multi-robot" data-zh="多机协作" data-en="Multi-Robot">多机协作</button>
             <button class="tab-btn" data-tab="chat" data-zh="AI 对话" data-en="AI Chat">AI 对话</button>
             <button class="tab-btn" data-tab="skills" data-zh="技能" data-en="Skills">技能</button>
             <button class="tab-btn" data-tab="gaits" data-zh="步态" data-en="Gaits">步态</button>
@@ -101,6 +102,228 @@
                         <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)" data-zh-placeholder="输入命令 (如: kbalance)" data-en-placeholder="Enter command (e.g., kbalance)">
                     </div>
                     <button id="send-command" class="btn btn-primary" data-zh="发送" data-en="Send">发送</button>
+                </div>
+            </section>
+
+            <!-- Multi-Robot Collaboration Tab -->
+            <section id="multi-robot-tab" class="tab-content">
+                <!-- My Robot Info Panel -->
+                <div class="panel">
+                    <h2 data-zh="🤖 本机信息" data-en="🤖 My Robot Info">🤖 本机信息</h2>
+                    <div class="robot-info-grid">
+                        <div class="info-item">
+                            <span class="info-label" data-zh="机器人 ID:" data-en="Robot ID:">机器人 ID:</span>
+                            <span id="my-robot-id" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label" data-zh="当前角色:" data-en="Current Role:">当前角色:</span>
+                            <span id="my-robot-role" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label" data-zh="状态:" data-en="Status:">状态:</span>
+                            <span id="my-robot-status" class="info-value status-online">Online</span>
+                        </div>
+                    </div>
+                    <div class="role-switch-section">
+                        <h3 data-zh="切换角色" data-en="Switch Role">切换角色</h3>
+                        <div class="role-buttons">
+                            <button id="role-master" class="btn btn-role" data-role="master">
+                                <span class="role-icon">👑</span>
+                                <span class="role-name" data-zh="主控 (Master)" data-en="Master">主控 (Master)</span>
+                            </button>
+                            <button id="role-slave" class="btn btn-role" data-role="slave">
+                                <span class="role-icon">🤖</span>
+                                <span class="role-name" data-zh="从机 (Slave)" data-en="Slave">从机 (Slave)</span>
+                            </button>
+                            <button id="role-standalone" class="btn btn-role active" data-role="standalone">
+                                <span class="role-icon">🎯</span>
+                                <span class="role-name" data-zh="单机 (Standalone)" data-en="Standalone">单机 (Standalone)</span>
+                            </button>
+                        </div>
+                        <p class="role-description" id="role-desc-master" style="display:none;" data-zh="作为主控，您可以管理其他机器人，创建群组，执行同步动作。" data-en="As Master, you can manage other robots, create groups, and execute synchronized actions.">作为主控，您可以管理其他机器人，创建群组，执行同步动作。</p>
+                        <p class="role-description" id="role-desc-slave" style="display:none;" data-zh="作为从机，您将接收并执行来自主控的命令。" data-en="As Slave, you will receive and execute commands from the Master.">作为从机，您将接收并执行来自主控的命令。</p>
+                        <p class="role-description" id="role-desc-standalone" data-zh="单机模式下，您独立运行，不与其他机器人协作。" data-en="In Standalone mode, you run independently without collaborating with other robots.">单机模式下，您独立运行，不与其他机器人协作。</p>
+                    </div>
+                </div>
+
+                <!-- Robot List Panel (Master only) -->
+                <div class="panel multi-robot-panel" id="robot-list-panel" style="display:none;">
+                    <h2>
+                        <span data-zh="🤖 机器人列表" data-en="🤖 Robot List">🤖 机器人列表</span>
+                        <button id="refresh-robots" class="btn btn-secondary btn-small" data-zh="刷新" data-en="Refresh">刷新</button>
+                    </h2>
+                    <div class="robot-status-summary">
+                        <span class="status-badge online">
+                            <span class="dot"></span>
+                            <span data-zh="在线" data-en="Online">在线</span>: <span id="online-count">0</span>
+                        </span>
+                        <span class="status-badge offline">
+                            <span class="dot"></span>
+                            <span data-zh="离线" data-en="Offline">离线</span>: <span id="offline-count">0</span>
+                        </span>
+                        <span class="status-badge busy">
+                            <span class="dot"></span>
+                            <span data-zh="忙碌" data-en="Busy">忙碌</span>: <span id="busy-count">0</span>
+                        </span>
+                    </div>
+                    <div id="robots-container" class="robots-list">
+                        <!-- Robot items will be added here dynamically -->
+                        <div class="empty-state" data-zh="暂无其他机器人" data-en="No other robots">暂无其他机器人</div>
+                    </div>
+                    <div class="add-robot-section">
+                        <h3 data-zh="添加机器人" data-en="Add Robot">添加机器人</h3>
+                        <div class="form-row">
+                            <input type="text" id="new-robot-id" placeholder="Robot ID" data-zh-placeholder="机器人ID" data-en-placeholder="Robot ID">
+                            <input type="text" id="new-robot-name" placeholder="Name" data-zh-placeholder="名称" data-en-placeholder="Name">
+                            <input type="text" id="new-robot-ip" placeholder="IP Address" data-zh-placeholder="IP地址" data-en-placeholder="IP Address" value="127.0.0.1">
+                            <input type="number" id="new-robot-port" placeholder="Port" value="8080">
+                            <button id="add-robot-btn" class="btn btn-primary" data-zh="添加" data-en="Add">添加</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Management Panel (Master only) -->
+                <div class="panel multi-robot-panel" id="group-panel" style="display:none;">
+                    <h2>
+                        <span data-zh="👥 群组管理" data-en="👥 Group Management">👥 群组管理</span>
+                        <button id="refresh-groups" class="btn btn-secondary btn-small" data-zh="刷新" data-en="Refresh">刷新</button>
+                    </h2>
+                    <div id="groups-container" class="groups-list">
+                        <!-- Groups will be added here dynamically -->
+                        <div class="empty-state" data-zh="暂无群组" data-en="No groups">暂无群组</div>
+                    </div>
+                    <div class="create-group-section">
+                        <h3 data-zh="创建群组" data-en="Create Group">创建群组</h3>
+                        <div class="form-group">
+                            <label data-zh="群组名称:" data-en="Group Name:">群组名称:</label>
+                            <input type="text" id="new-group-name" data-zh-placeholder="输入群组名称" data-en-placeholder="Enter group name">
+                        </div>
+                        <div class="form-group">
+                            <label data-zh="选择机器人:" data-en="Select Robots:">选择机器人:</label>
+                            <div id="group-robot-selection" class="robot-checkbox-list">
+                                <!-- Checkboxes will be added here dynamically -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label data-zh="队形:" data-en="Formation:">队形:</label>
+                            <select id="new-group-formation">
+                                <option value="none" data-zh="无队形" data-en="None">无队形</option>
+                                <option value="line" data-zh="横队 (Line)" data-en="Line">横队 (Line)</option>
+                                <option value="column" data-zh="纵队 (Column)" data-en="Column">纵队 (Column)</option>
+                                <option value="wedge" data-zh="楔形 (Wedge)" data-en="Wedge">楔形 (Wedge)</option>
+                                <option value="circle" data-zh="圆形 (Circle)" data-en="Circle">圆形 (Circle)</option>
+                            </select>
+                        </div>
+                        <button id="create-group-btn" class="btn btn-primary" data-zh="创建群组" data-en="Create Group">创建群组</button>
+                    </div>
+                </div>
+
+                <!-- Sync Action Panel (Master only) -->
+                <div class="panel multi-robot-panel" id="sync-action-panel" style="display:none;">
+                    <h2 data-zh="⚡ 同步动作" data-en="⚡ Synchronized Actions">⚡ 同步动作</h2>
+                    <div class="sync-action-form">
+                        <div class="form-group">
+                            <label data-zh="目标机器人:" data-en="Target Robots:">目标机器人:</label>
+                            <select id="sync-target">
+                                <option value="all" data-zh="全部机器人" data-en="All Robots">全部机器人</option>
+                                <option value="group" data-zh="指定群组" data-en="Specific Group">指定群组</option>
+                                <option value="selected" data-zh="选择机器人" data-en="Selected Robots">选择机器人</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="sync-group-select" style="display:none;">
+                            <label data-zh="选择群组:" data-en="Select Group:">选择群组:</label>
+                            <select id="sync-group-id">
+                                <!-- Groups will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group" id="sync-robots-select" style="display:none;">
+                            <label data-zh="选择机器人:" data-en="Select Robots:">选择机器人:</label>
+                            <div id="sync-robot-checkboxes" class="robot-checkbox-list">
+                                <!-- Checkboxes will be added dynamically -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label data-zh="动作类型:" data-en="Action Type:">动作类型:</label>
+                            <select id="sync-action-type">
+                                <option value="skill" data-zh="技能" data-en="Skill">技能</option>
+                                <option value="gait" data-zh="步态" data-en="Gait">步态</option>
+                                <option value="joint" data-zh="关节" data-en="Joint">关节</option>
+                                <option value="custom" data-zh="自定义" data-en="Custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="sync-skill-params">
+                            <label data-zh="技能:" data-en="Skill:">技能:</label>
+                            <select id="sync-skill-name">
+                                <option value="sit">Sit</option>
+                                <option value="balance">Balance</option>
+                                <option value="rest">Rest</option>
+                                <option value="hi">Hi</option>
+                                <option value="pu">Push-up</option>
+                                <option value="zero">Zero</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="sync-gait-params" style="display:none;">
+                            <label data-zh="步态:" data-en="Gait:">步态:</label>
+                            <select id="sync-gait-name">
+                                <option value="walk_forward">Walk Forward</option>
+                                <option value="walk_left">Walk Left</option>
+                                <option value="walk_right">Walk Right</option>
+                                <option value="trot_forward">Trot Forward</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="sync-joint-params" style="display:none;">
+                            <label data-zh="关节:" data-en="Joint:">关节:</label>
+                            <input type="number" id="sync-joint-id" min="0" max="15" value="0">
+                            <label data-zh="角度:" data-en="Angle:">角度:</label>
+                            <input type="number" id="sync-joint-angle" min="-90" max="90" value="0">
+                        </div>
+                        <div class="form-group" id="sync-custom-params" style="display:none;">
+                            <label data-zh="命令:" data-en="Command:">命令:</label>
+                            <input type="text" id="sync-custom-command" placeholder="e.g., kbalance">
+                        </div>
+                        <div class="form-group">
+                            <label data-zh="延时 (秒):" data-en="Delay (seconds):">延时 (秒):</label>
+                            <input type="number" id="sync-delay" min="0" max="10" step="0.1" value="0.5">
+                        </div>
+                        <button id="execute-sync-btn" class="btn btn-primary btn-large" data-zh="执行同步动作" data-en="Execute Sync Action">执行同步动作</button>
+                    </div>
+                    <div id="sync-results" class="sync-results">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+
+                <!-- Slave Mode Panel (Slave only) -->
+                <div class="panel multi-robot-panel" id="slave-panel" style="display:none;">
+                    <h2 data-zh="📡 从机模式" data-en="📡 Slave Mode">📡 从机模式</h2>
+                    <div class="slave-status">
+                        <div class="status-indicator">
+                            <span class="status-label" data-zh="主控连接:" data-en="Master Connection:">主控连接:</span>
+                            <span id="master-connection-status" class="status-value disconnected" data-zh="未连接" data-en="Disconnected">未连接</span>
+                        </div>
+                        <div class="master-info" id="master-info" style="display:none;">
+                            <p><span data-zh="主控 ID:" data-en="Master ID:">主控 ID:</span> <span id="master-id">-</span></p>
+                            <p><span data-zh="主控 IP:" data-en="Master IP:">主控 IP:</span> <span id="master-ip">-</span></p>
+                        </div>
+                    </div>
+                    <div class="slave-config">
+                        <h3 data-zh="连接到主控" data-en="Connect to Master">连接到主控</h3>
+                        <div class="form-group">
+                            <label data-zh="主控 IP:" data-en="Master IP:">主控 IP:</label>
+                            <input type="text" id="master-ip-input" placeholder="192.168.1.100" value="127.0.0.1">
+                        </div>
+                        <div class="form-group">
+                            <label data-zh="主控端口:" data-en="Master Port:">主控端口:</label>
+                            <input type="number" id="master-port-input" value="8080">
+                        </div>
+                        <button id="connect-master-btn" class="btn btn-primary" data-zh="连接主控" data-en="Connect to Master">连接主控</button>
+                        <button id="disconnect-master-btn" class="btn btn-danger" style="display:none;" data-zh="断开连接" data-en="Disconnect">断开连接</button>
+                    </div>
+                    <div class="slave-logs">
+                        <h3 data-zh="接收的命令日志" data-en="Received Commands Log">接收的命令日志</h3>
+                        <div id="slave-commands-log" class="log-container">
+                            <div class="empty-state" data-zh="暂无命令" data-en="No commands">暂无命令</div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

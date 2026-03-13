@@ -694,3 +694,504 @@ header h1 {
         padding: 12px 15px;
     }
 }
+
+/* ==================== Multi-Robot Collaboration Styles ==================== */
+
+/* Robot Info Grid */
+.robot-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.info-label {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.info-value {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.status-online {
+    color: var(--success-color);
+}
+
+.status-offline {
+    color: var(--danger-color);
+}
+
+.status-busy {
+    color: var(--warning-color);
+}
+
+/* Role Switch Section */
+.role-switch-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.role-switch-section h3 {
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+    font-size: 1.1em;
+}
+
+.role-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.btn-role {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 30px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-role:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.btn-role.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.role-icon {
+    font-size: 2em;
+}
+
+.role-name {
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.role-description {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary-color);
+}
+
+/* Robot Status Summary */
+.robot-status-summary {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    font-size: 0.9em;
+}
+
+.status-badge .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-badge.online .dot {
+    background: var(--success-color);
+}
+
+.status-badge.offline .dot {
+    background: var(--danger-color);
+}
+
+.status-badge.busy .dot {
+    background: var(--warning-color);
+}
+
+/* Robot List */
+.robots-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.robot-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.robot-item:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-tertiary);
+}
+
+.robot-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+}
+
+.robot-info {
+    flex: 1;
+}
+
+.robot-name {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.robot-details {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.robot-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.robot-status.online {
+    background: rgba(39, 174, 96, 0.2);
+    color: var(--success-color);
+}
+
+.robot-status.offline {
+    background: rgba(231, 76, 60, 0.2);
+    color: var(--danger-color);
+}
+
+.robot-status.busy {
+    background: rgba(243, 156, 18, 0.2);
+    color: var(--warning-color);
+}
+
+.robot-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Add Robot Section */
+.add-robot-section {
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.add-robot-section h3 {
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+    font-size: 1em;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.form-row input {
+    flex: 1;
+    min-width: 100px;
+}
+
+/* Group List */
+.groups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.group-item {
+    padding: 15px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.group-name {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.group-formation {
+    padding: 4px 10px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.group-robots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.group-robot-tag {
+    padding: 4px 10px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+.group-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Create Group Section */
+.create-group-section {
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.create-group-section h3 {
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+    font-size: 1em;
+}
+
+.robot-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.robot-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.robot-checkbox-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.robot-checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Sync Action Form */
+.sync-action-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.sync-action-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sync-action-form label {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.btn-large {
+    padding: 15px 30px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.sync-results {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.sync-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sync-result-item:last-child {
+    border-bottom: none;
+}
+
+.result-success {
+    color: var(--success-color);
+}
+
+.result-failed {
+    color: var(--danger-color);
+}
+
+/* Slave Mode Panel */
+.slave-status {
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.master-info {
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.master-info p {
+    margin: 5px 0;
+    color: var(--text-secondary);
+}
+
+.slave-config {
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.slave-config h3 {
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+    font-size: 1em;
+}
+
+.slave-logs h3 {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+    font-size: 1em;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Multi-robot Panel Visibility */
+.multi-robot-panel {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .role-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-role {
+        flex-direction: row;
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .robot-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        flex-direction: column;
+    }
+    
+    .form-row input {
+        width: 100%;
+    }
+    
+    .robot-item {
+        flex-wrap: wrap;
+    }
+    
+    .robot-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+}

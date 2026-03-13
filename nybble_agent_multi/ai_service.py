@@ -22,7 +22,7 @@ class AIService:
         self.language = 'zh'
         
         self.system_prompts = {
-            'zh': """你是 Nybble 机器猫的智能控制助手。你可以通过生成动作命令来控制机器猫。
+            'zh': """你是 Nybble 机器猫的智能控制助手。你可以通过生成动作命令来控制单台或多台机器猫。
 
 可用的动作命令：
 - 技能命令: sit(坐下), balance(站立), rest(休息), butt_up(翘臀), hi(打招呼), pu(俯卧撑), zero(归零), pee(小便动作), rc(翻身), jy(跳跃), pd(趴下)
@@ -33,27 +33,30 @@ class AIService:
 - 0: 头部左右, 1: 头部上下, 2: 尾巴左右, 3: 尾巴上下
 - 8-15: 四肢关节
 
-当用户要求机器猫做动作时，你需要：
-1. 理解用户的意图
-2. 选择合适的动作命令
-3. 以 JSON 格式返回命令
-
-返回格式示例：
+单机控制返回格式示例：
 {"action": "skill", "name": "sit", "description": "坐下"}
 {"action": "gait", "name": "walk_forward", "description": "向前走"}
 {"action": "joint", "joint": 0, "angle": 30, "description": "头部向右转30度"}
 {"action": "sequence", "commands": [{"action": "skill", "name": "sit", "delay": 1.0}, {"action": "skill", "name": "hi", "delay": 0.5}], "description": "坐下然后打招呼"}
-{"action": "none", "description": "不需要执行动作，仅回复文字"}
+
+多机协作返回格式（multi 类型）：
+{"action": "multi", "tasks": [{"robot_id": "robot1", "action_type": "skill", "params": {"name": "sit"}, "delay": 0.0}, {"robot_id": "robot2", "action_type": "skill", "params": {"name": "hi"}, "delay": 1.0}], "description": "机器1坐下，机器2打招呼"}
+
+你可以通过以下方式指定目标机器人：
+- 使用 robot_id: 机器人的唯一标识符
+- 使用 nickname: 机器人的昵称/别名
+- 使用 tag: 机器人标签，如 "leader", "follower" 等
 
 重要提示：
-- 每个动作命令都可以包含 "delay" 字段（单位：秒），表示执行该动作后等待的时间
+- 每个动作命令都可以包含 "delay" 字段（单位：秒），表示执行该动作前等待的时间
+- 在多机协作中，可以为每台机器人设置不同的 delay，实现错峰执行
 - 技能动作建议延时 1.0-2.0 秒
 - 步态动作建议延时 2.0-3.0 秒
 - 组合动作序列时，务必为每个动作添加合适的延时，确保机器人有足够时间完成动作
 
 请用中文回复，保持友好和有趣。当需要执行动作时，在回复末尾包含命令JSON。""",
             
-            'en': """You are an intelligent control assistant for the Nybble robot cat. You can control the robot by generating action commands.
+            'en': """You are an intelligent control assistant for the Nybble robot cat. You can control single or multiple robots by generating action commands.
 
 Available action commands:
 - Skill commands: sit, balance, rest, butt_up, hi, pu (push-up), zero, pee, rc (roll over), jy (jump), pd (lie down)
@@ -64,20 +67,23 @@ Joint numbers:
 - 0: Head pan (left-right), 1: Head tilt (up-down), 2: Tail pan, 3: Tail tilt
 - 8-15: Leg joints
 
-When the user asks the robot to perform an action, you need to:
-1. Understand the user's intent
-2. Select appropriate action commands
-3. Return commands in JSON format
-
-Return format examples:
+Single robot control format examples:
 {"action": "skill", "name": "sit", "description": "Sit down"}
 {"action": "gait", "name": "walk_forward", "description": "Walk forward"}
 {"action": "joint", "joint": 0, "angle": 30, "description": "Turn head right 30 degrees"}
 {"action": "sequence", "commands": [{"action": "skill", "name": "sit", "delay": 1.0}, {"action": "skill", "name": "hi", "delay": 0.5}], "description": "Sit down then say hi"}
-{"action": "none", "description": "No action needed, text response only"}
+
+Multi-robot collaboration format (multi type):
+{"action": "multi", "tasks": [{"robot_id": "robot1", "action_type": "skill", "params": {"name": "sit"}, "delay": 0.0}, {"robot_id": "robot2", "action_type": "skill", "params": {"name": "hi"}, "delay": 1.0}], "description": "Robot 1 sits, Robot 2 says hi"}
+
+You can specify target robots by:
+- robot_id: Robot's unique identifier
+- nickname: Robot's nickname/alias
+- tag: Robot tags, such as "leader", "follower", etc.
 
 Important notes:
-- Each action command can include a "delay" field (in seconds) indicating the wait time after executing the action
+- Each action command can include a "delay" field (in seconds) indicating the wait time BEFORE executing the action
+- In multi-robot collaboration, you can set different delays for each robot to achieve staggered execution
 - Skill actions suggest a delay of 1.0-2.0 seconds
 - Gait actions suggest a delay of 2.0-3.0 seconds
 - For action sequences, make sure to add appropriate delays for each action to ensure the robot has enough time to complete them
@@ -359,5 +365,19 @@ Please respond in English, keeping it friendly and engaging. When an action is n
                 time.sleep(delay)
                 return {'success': True, 'message': f'发送命令: {command}', 'delay': delay}
             return {'success': False, 'message': '无自定义命令'}
+        
+        elif action_type == 'multi':
+            # 多机协作动作 - 需要 robot_manager 来执行
+            tasks = action.get('tasks', [])
+            if not tasks:
+                return {'success': False, 'message': '无任务列表'}
+            
+            # 返回任务列表供上层处理
+            return {
+                'success': True, 
+                'message': f'多机协作任务: {len(tasks)} 个机器人',
+                'action_type': 'multi',
+                'tasks': tasks
+            }
         
         return {'success': False, 'message': f'未知动作类型: {action_type}'}

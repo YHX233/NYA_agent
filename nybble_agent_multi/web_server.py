@@ -25,6 +25,7 @@ class NybbleWebServer:
         self._command_callback: Optional[Callable[[str], None]] = None
         self._response_log: list = []
         self._lock = threading.Lock()
+        self._connect_callback: Optional[Callable[[], None]] = None  # 连接成功回调
     
     def set_serial_comm(self, serial_comm) -> None:
         self.serial_comm = serial_comm
@@ -43,6 +44,10 @@ class NybbleWebServer:
     
     def set_command_callback(self, callback: Callable[[str], None]) -> None:
         self._command_callback = callback
+
+    def set_connect_callback(self, callback: Callable[[], None]) -> None:
+        """设置串口连接成功后的回调函数"""
+        self._connect_callback = callback
     
     def _handle_serial_response(self, response: str) -> None:
         with self._lock:
@@ -89,6 +94,10 @@ class NybbleWebServer:
                 self._handle_get_robots()
             elif parsed.path == '/api/robots/status':
                 self._handle_get_robots_status()
+            elif parsed.path == '/api/robot/by-nickname':
+                self._handle_get_robot_by_nickname()
+            elif parsed.path == '/api/robots/by-tag':
+                self._handle_get_robots_by_tag()
             elif parsed.path == '/api/groups':
                 self._handle_get_groups()
             elif parsed.path == '/api/formations':
@@ -149,6 +158,12 @@ class NybbleWebServer:
                 self._handle_remove_from_group(data)
             elif parsed.path == '/api/sync-action':
                 self._handle_sync_action(data)
+            elif parsed.path == '/api/multi-tasks':
+                self._handle_multi_robot_tasks(data)
+            elif parsed.path == '/api/robot/nickname':
+                self._handle_update_robot_nickname(data)
+            elif parsed.path == '/api/robot/tags':
+                self._handle_update_robot_tags(data)
             elif parsed.path == '/api/formation/set':
                 self._handle_set_formation(data)
             else:
@@ -208,16 +223,22 @@ class NybbleWebServer:
             if not self.web_server or not self.web_server.serial_comm:
                 self._send_error(500, 'Serial communication not initialized')
                 return
-            
+
             port = data.get('port')
             baudrate = data.get('baudrate', 115200)
-            
+
             if port:
                 self.web_server.serial_comm.port = port
             self.web_server.serial_comm.baudrate = baudrate
-            
+
             success = self.web_server.serial_comm.connect()
             if success:
+                # 触发连接成功回调（启动电压监控等）
+                if self.web_server._connect_callback:
+                    try:
+                        self.web_server._connect_callback()
+                    except Exception as e:
+                        logger.error(f"Connect callback error: {e}")
                 self._send_json({'status': 'connected', 'port': port or self.web_server.serial_comm.port})
             else:
                 self._send_error(500, self.web_server.serial_comm.status.last_error)
@@ -579,13 +600,15 @@ class NybbleWebServer:
             params = data.get('params', {})
             target_robots = data.get('target_robots', ['all'])
             delay = data.get('delay', 0.0)
+            # 支持每台机器人的独立延时配置
+            robot_delays = data.get('robot_delays', {})
             
             if not action_type:
                 self._send_error(400, 'action_type required')
                 return
             
             action = self.web_server.robot_manager.execute_sync_action(
-                action_type, params, target_robots, delay
+                action_type, params, target_robots, delay, robot_delays
             )
             self._send_json({
                 'success': True,
@@ -593,9 +616,124 @@ class NybbleWebServer:
                     'id': action.id,
                     'action_type': action.action_type,
                     'target_robots': action.target_robots,
+                    'robot_delays': action.robot_delays,
                     'executed': action.executed,
                     'results': action.results
                 }
+            })
+        
+        def _handle_multi_robot_tasks(self, data: Dict[str, Any]) -> None:
+            """Execute different tasks on different robots with individual delays"""
+            if not self.web_server or not self.web_server.robot_manager:
+                self._send_error(500, 'Robot manager not initialized')
+                return
+            
+            from robot_manager import RobotTask
+            
+            tasks_data = data.get('tasks', [])
+            sequential = data.get('sequential', False)
+            
+            if not tasks_data:
+                self._send_error(400, 'tasks required')
+                return
+            
+            # 构建任务列表
+            tasks = []
+            for task_data in tasks_data:
+                task = RobotTask(
+                    robot_id=task_data.get('robot_id'),
+                    action_type=task_data.get('action_type'),
+                    params=task_data.get('params', {}),
+                    delay=task_data.get('delay', 0.0),
+                    wait_for_previous=task_data.get('wait_for_previous', False)
+                )
+                tasks.append(task)
+            
+            results = self.web_server.robot_manager.execute_multi_robot_tasks(tasks, sequential)
+            self._send_json(results)
+        
+        def _handle_update_robot_nickname(self, data: Dict[str, Any]) -> None:
+            """Update robot nickname"""
+            if not self.web_server or not self.web_server.robot_manager:
+                self._send_error(500, 'Robot manager not initialized')
+                return
+            
+            robot_id = data.get('robot_id')
+            nickname = data.get('nickname')
+            
+            if not robot_id or nickname is None:
+                self._send_error(400, 'robot_id and nickname required')
+                return
+            
+            success = self.web_server.robot_manager.update_robot_nickname(robot_id, nickname)
+            
+            if success:
+                robot = self.web_server.robot_manager.get_robot(robot_id)
+                self._send_json({
+                    'success': True,
+                    'robot_id': robot_id,
+                    'nickname': nickname,
+                    'display_name': robot.get_display_name() if robot else nickname
+                })
+            else:
+                self._send_error(404, 'Robot not found')
+        
+        def _handle_update_robot_tags(self, data: Dict[str, Any]) -> None:
+            """Update robot tags"""
+            if not self.web_server or not self.web_server.robot_manager:
+                self._send_error(500, 'Robot manager not initialized')
+                return
+            
+            robot_id = data.get('robot_id')
+            tags = data.get('tags', [])
+            
+            if not robot_id:
+                self._send_error(400, 'robot_id required')
+                return
+            
+            success = self.web_server.robot_manager.update_robot_tags(robot_id, tags)
+            self._send_json({'success': success, 'robot_id': robot_id, 'tags': tags})
+        
+        def _handle_get_robot_by_nickname(self) -> None:
+            """Get robot by nickname"""
+            if not self.web_server or not self.web_server.robot_manager:
+                self._send_error(500, 'Robot manager not initialized')
+                return
+            
+            parsed = urllib.parse.urlparse(self.path)
+            params = urllib.parse.parse_qs(parsed.query)
+            nickname = params.get('nickname', [None])[0]
+            
+            if not nickname:
+                self._send_error(400, 'nickname parameter required')
+                return
+            
+            robot = self.web_server.robot_manager.get_robot_by_nickname(nickname)
+            if robot:
+                self._send_json({'success': True, 'robot': robot.to_dict()})
+            else:
+                self._send_json({'success': False, 'message': 'Robot not found'})
+        
+        def _handle_get_robots_by_tag(self) -> None:
+            """Get robots by tag"""
+            if not self.web_server or not self.web_server.robot_manager:
+                self._send_error(500, 'Robot manager not initialized')
+                return
+            
+            parsed = urllib.parse.urlparse(self.path)
+            params = urllib.parse.parse_qs(parsed.query)
+            tag = params.get('tag', [None])[0]
+            
+            if not tag:
+                self._send_error(400, 'tag parameter required')
+                return
+            
+            robots = self.web_server.robot_manager.get_robots_by_tag(tag)
+            self._send_json({
+                'success': True,
+                'tag': tag,
+                'robots': [r.to_dict() for r in robots],
+                'count': len(robots)
             })
         
         def _handle_set_formation(self, data: Dict[str, Any]) -> None:

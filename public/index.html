@@ -3,237 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nybble Agent - Petoi Robot Control</title>
+    <title>Nybble Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🐱 Nybble Agent</h1>
-            <p class="subtitle" data-zh="Petoi Nybble 机器人控制系统" data-en="Petoi Nybble Robot Control System">Petoi Nybble 机器人控制系统</p>
-            <div class="language-switch">
-                <button id="lang-zh" class="lang-btn active">中文</button>
-                <button id="lang-en" class="lang-btn">English</button>
+<body class="bg-gray-50 text-gray-900 font-light">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="max-w-5xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white text-sm font-medium">
+                        N
+                    </div>
+                    <span class="text-lg font-medium tracking-tight">Nybble Agent</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="w-2 h-2 rounded-full bg-gray-300" id="status-dot"></span>
+                        <span class="text-gray-500" id="status-text">未连接</span>
+                    </div>
+                    <button id="lang-toggle" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                        EN
+                    </button>
+                </div>
             </div>
         </header>
 
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="control" data-zh="控制面板" data-en="Control Panel">控制面板</button>
-            <button class="tab-btn" data-tab="chat" data-zh="AI 对话" data-en="AI Chat">AI 对话</button>
-            <button class="tab-btn" data-tab="skills" data-zh="技能" data-en="Skills">技能</button>
-            <button class="tab-btn" data-tab="gaits" data-zh="步态" data-en="Gaits">步态</button>
-            <button class="tab-btn" data-tab="joints" data-zh="关节" data-en="Joints">关节</button>
-            <button class="tab-btn" data-tab="settings" data-zh="设置" data-en="Settings">设置</button>
-        </nav>
-
-        <div class="status-bar">
-            <div class="status-item">
-                <span class="status-label" data-zh="连接状态:" data-en="Status:">连接状态:</span>
-                <span id="connection-status" class="status-value disconnected" data-zh="未连接" data-en="Disconnected">未连接</span>
+        <!-- Main Content -->
+        <main class="flex-1 max-w-5xl mx-auto w-full p-6">
+            <!-- Connection Bar -->
+            <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+                <div class="flex items-center gap-4 flex-wrap">
+                    <select id="port-select" class="flex-1 min-w-[200px] bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                        <option value="">选择串口...</option>
+                    </select>
+                    <select id="baudrate-select" class="w-32 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                        <option value="9600">9600</option>
+                        <option value="57600">57600</option>
+                        <option value="115200" selected>115200</option>
+                    </select>
+                    <button id="connect-btn" class="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        连接
+                    </button>
+                    <button id="disconnect-btn" class="px-6 py-2 bg-white text-gray-700 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors hidden">
+                        断开
+                    </button>
+                </div>
             </div>
-            <div class="status-item">
-                <span class="status-label" data-zh="串口:" data-en="Port:">串口:</span>
-                <span id="port-display" class="status-value">-</span>
+
+            <!-- Tab Navigation -->
+            <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+                <button class="tab-btn active px-4 py-2 text-sm font-medium rounded-md transition-all" data-tab="control">控制</button>
+                <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-700" data-tab="chat">AI</button>
+                <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md transition-all text-gray-500 hover:text-gray-700" data-tab="settings">设置</button>
             </div>
-            <div class="status-item">
-                <span class="status-label" data-zh="波特率:" data-en="Baudrate:">波特率:</span>
-                <span id="baudrate-display" class="status-value">115200</span>
-            </div>
-        </div>
 
-        <main>
-            <section id="control-tab" class="tab-content active">
-                <div class="panel">
-                    <h2 data-zh="连接设置" data-en="Connection Settings">连接设置</h2>
-                    <div class="form-group">
-                        <label for="port-select" data-zh="串口:" data-en="Port:">串口:</label>
-                        <select id="port-select">
-                            <option value="" data-zh="选择串口..." data-en="Select port...">选择串口...</option>
-                        </select>
-                        <button id="refresh-ports" class="btn btn-secondary" data-zh="刷新" data-en="Refresh">刷新</button>
-                    </div>
-                    <div class="form-group">
-                        <label for="baudrate-select" data-zh="波特率:" data-en="Baudrate:">波特率:</label>
-                        <select id="baudrate-select">
-                            <option value="9600">9600</option>
-                            <option value="57600">57600</option>
-                            <option value="115200" selected>115200</option>
-                        </select>
-                    </div>
-                    <div class="button-group">
-                        <button id="connect-btn" class="btn btn-primary" data-zh="连接" data-en="Connect">连接</button>
-                        <button id="disconnect-btn" class="btn btn-danger" disabled data-zh="断开" data-en="Disconnect">断开</button>
-                    </div>
+            <!-- Control Tab -->
+            <section id="control-tab" class="tab-content active space-y-6">
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="sit">
+                        <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">🪑</div>
+                        <div class="text-sm font-medium">坐下</div>
+                    </button>
+                    <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="balance">
+                        <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">⚖️</div>
+                        <div class="text-sm font-medium">站立</div>
+                    </button>
+                    <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="rest">
+                        <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">😴</div>
+                        <div class="text-sm font-medium">休息</div>
+                    </button>
+                    <button class="action-btn bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-400 hover:shadow-sm transition-all group" data-action="hi">
+                        <div class="text-2xl mb-2 group-hover:scale-110 transition-transform">👋</div>
+                        <div class="text-sm font-medium">打招呼</div>
+                    </button>
                 </div>
 
-                <div class="panel">
-                    <h2 data-zh="快速控制" data-en="Quick Control">快速控制</h2>
-                    <div class="quick-controls">
-                        <div class="control-row">
-                            <button class="btn btn-gait" data-gait="walk_forward" data-zh="↑ 前进" data-en="↑ Forward">↑ 前进</button>
-                        </div>
-                        <div class="control-row">
-                            <button class="btn btn-gait" data-gait="walk_left" data-zh="↰ 左转" data-en="↰ Left">↰ 左转</button>
-                            <button class="btn btn-skill" data-skill="balance" data-zh="站立" data-en="Stand">站立</button>
-                            <button class="btn btn-gait" data-gait="walk_right" data-zh="↱ 右转" data-en="↱ Right">↱ 右转</button>
-                        </div>
-                        <div class="control-row">
-                            <button class="btn btn-gait" data-gait="trot_forward" data-zh="↑ 小跑" data-en="↑ Trot">↑ 小跑</button>
-                        </div>
-                    </div>
-                    <div class="quick-controls">
-                        <div class="control-row">
-                            <button class="btn btn-skill" data-skill="sit" data-zh="坐下" data-en="Sit">坐下</button>
-                            <button class="btn btn-skill" data-skill="rest" data-zh="休息" data-en="Rest">休息</button>
-                            <button class="btn btn-skill" data-skill="butt_up" data-zh="翘臀" data-en="Butt Up">翘臀</button>
-                        </div>
-                        <div class="control-row">
-                            <button class="btn btn-skill" data-skill="hi" data-zh="打招呼" data-en="Say Hi">打招呼</button>
-                            <button class="btn btn-skill" data-skill="pu" data-zh="俯卧撑" data-en="Push-up">俯卧撑</button>
-                            <button class="btn btn-skill" data-skill="zero" data-zh="归零" data-en="Zero">归零</button>
+                <!-- Movement -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">移动</h3>
+                    <div class="flex justify-center">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div></div>
+                            <button class="move-btn w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all flex items-center justify-center text-xl" data-gait="walk_forward">↑</button>
+                            <div></div>
+                            <button class="move-btn w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all flex items-center justify-center text-xl" data-gait="walk_left">←</button>
+                            <button class="move-btn w-16 h-16 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center text-xl" data-skill="balance">●</button>
+                            <button class="move-btn w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all flex items-center justify-center text-xl" data-gait="walk_right">→</button>
+                            <div></div>
+                            <button class="move-btn w-16 h-16 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all flex items-center justify-center text-xl" data-gait="back">↓</button>
+                            <div></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="panel">
-                    <h2 data-zh="自定义命令" data-en="Custom Command">自定义命令</h2>
-                    <div class="form-group">
-                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)" data-zh-placeholder="输入命令 (如: kbalance)" data-en-placeholder="Enter command (e.g., kbalance)">
+                <!-- Advanced -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">高级</h3>
+                    <div class="flex gap-3">
+                        <input type="text" id="custom-command" placeholder="输入命令 (如: kbalance)" 
+                            class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                        <button id="send-command" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                            发送
+                        </button>
                     </div>
-                    <button id="send-command" class="btn btn-primary" data-zh="发送" data-en="Send">发送</button>
                 </div>
-            </section>
 
-            <section id="chat-tab" class="tab-content">
-                <div class="panel chat-panel">
-                    <h2>
-                        <span data-zh="🤖 AI 智能控制" data-en="🤖 AI Control">🤖 AI 智能控制</span>
-                        <span id="ai-status" class="ai-status"></span>
-                        <button id="clear-chat" class="btn btn-secondary btn-small" data-zh="清除对话" data-en="Clear">清除对话</button>
-                    </h2>
-                    <div class="chat-hint">
-                        <p data-zh="与 AI 对话，让它帮你控制机器猫！试试说：" data-en="Chat with AI to control the robot! Try saying:">与 AI 对话，让它帮你控制机器猫！试试说：</p>
-                        <div class="chat-examples">
-                            <button class="example-btn" data-msg="坐下" data-zh="坐下" data-en="Sit down">坐下</button>
-                            <button class="example-btn" data-msg="向前走几步" data-zh="向前走" data-en="Walk forward">向前走</button>
-                            <button class="example-btn" data-msg="打个招呼" data-zh="打招呼" data-en="Say hi">打招呼</button>
-                            <button class="example-btn" data-msg="做个俯卧撑" data-zh="俯卧撑" data-en="Push-up">俯卧撑</button>
-                            <button class="example-btn" data-msg="先坐下，然后站起来" data-zh="组合动作" data-en="Combo">组合动作</button>
-                        </div>
+                <!-- Joints -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider">关节控制</h3>
+                        <button id="toggle-joints" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                            展开
+                        </button>
                     </div>
-                    <div id="chat-messages" class="chat-messages">
-                        <div class="welcome-message">
-                            <p data-zh="👋 你好！我是 Nybble 的 AI 助手。" data-en="👋 Hello! I'm Nybble's AI assistant.">👋 你好！我是 Nybble 的 AI 助手。</p>
-                            <p data-zh="告诉我你想让机器猫做什么，我会帮你生成相应的动作命令。" data-en="Tell me what you want the robot to do, and I'll generate the action commands.">告诉我你想让机器猫做什么，我会帮你生成相应的动作命令。</p>
-                        </div>
-                    </div>
-                    <div class="chat-input-area">
-                        <div class="chat-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="auto-execute" checked>
-                                <span data-zh="自动执行动作" data-en="Auto-execute actions">自动执行动作</span>
-                            </label>
-                        </div>
-                        <div class="chat-input-row">
-                            <input type="text" id="chat-input" placeholder="输入你想让机器猫做的事..." data-zh-placeholder="输入你想让机器猫做的事..." data-en-placeholder="Tell me what you want the robot to do..." disabled>
-                            <button id="chat-send" class="btn btn-primary" disabled data-zh="发送" data-en="Send">发送</button>
+                    <div id="joints-container" class="hidden space-y-4">
+                        <div id="joints-controls" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Joints will be rendered here -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section id="skills-tab" class="tab-content">
-                <div class="panel">
-                    <h2 data-zh="技能列表" data-en="Skill List">技能列表</h2>
-                    <div id="skills-grid" class="command-grid">
+            <!-- Chat Tab -->
+            <section id="chat-tab" class="tab-content hidden">
+                <div class="bg-white rounded-xl border border-gray-200 h-[500px] flex flex-col">
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div class="text-center text-gray-400 text-sm py-8">
+                            <p>与 AI 对话来控制机器猫</p>
+                            <div class="flex gap-2 justify-center mt-4 flex-wrap">
+                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="坐下">坐下</button>
+                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="向前走">向前走</button>
+                                <button class="example-btn px-3 py-1 bg-gray-100 rounded-full text-xs hover:bg-gray-200 transition-colors" data-msg="打个招呼">打招呼</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200 p-4">
+                        <div class="flex gap-3">
+                            <input type="text" id="chat-input" placeholder="输入指令..." disabled
+                                class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                            <button id="chat-send" disabled class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                发送
+                            </button>
+                        </div>
+                        <label class="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                            <input type="checkbox" id="auto-execute" checked class="rounded border-gray-300">
+                            <span>自动执行</span>
+                        </label>
                     </div>
                 </div>
             </section>
 
-            <section id="gaits-tab" class="tab-content">
-                <div class="panel">
-                    <h2 data-zh="步态列表" data-en="Gait List">步态列表</h2>
-                    <div id="gaits-grid" class="command-grid">
-                    </div>
-                </div>
-            </section>
-
-            <section id="joints-tab" class="tab-content">
-                <div class="panel">
-                    <h2 data-zh="关节控制" data-en="Joint Control">关节控制</h2>
-                    <div id="joints-controls" class="joints-grid">
-                    </div>
-                </div>
-            </section>
-
-            <section id="settings-tab" class="tab-content">
-                <div class="panel">
-                    <h2 data-zh="API 设置" data-en="API Settings">API 设置</h2>
-                    <p class="hint" data-zh="配置 AI API 用于智能控制功能" data-en="Configure AI API for intelligent control">配置 AI API 用于智能控制功能</p>
-                    <div class="form-group">
-                        <label for="api-provider" data-zh="提供商:" data-en="Provider:">提供商:</label>
-                        <select id="api-provider">
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic</option>
-                            <option value="deepseek">DeepSeek</option>
-                            <option value="moonshot">Moonshot</option>
-                            <option value="zhipu">Zhipu AI</option>
-                            <option value="qwen">Qwen</option>
-                            <option value="custom" data-zh="自定义" data-en="Custom">自定义</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="api-key">API Key:</label>
-                        <input type="password" id="api-key" placeholder="输入 API Key" data-zh-placeholder="输入 API Key" data-en-placeholder="Enter API Key">
-                    </div>
-                    <div class="form-group">
-                        <label for="api-base-url" data-zh="Base URL (可选):" data-en="Base URL (optional):">Base URL (可选):</label>
-                        <input type="text" id="api-base-url" placeholder="https://api.openai.com/v1">
-                    </div>
-                    <div class="form-group">
-                        <label for="api-model" data-zh="模型:" data-en="Model:">模型:</label>
-                        <div class="model-select-container">
-                            <select id="api-model">
-                                <option value="" data-zh="选择模型..." data-en="Select model...">选择模型...</option>
+            <!-- Settings Tab -->
+            <section id="settings-tab" class="tab-content hidden space-y-6">
+                <!-- AI Settings -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">AI 设置</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-2">提供商</label>
+                            <select id="api-provider" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="moonshot">Moonshot</option>
+                                <option value="zhipu">Zhipu AI</option>
+                                <option value="qwen">Qwen</option>
+                                <option value="custom">自定义</option>
                             </select>
-                            <button id="scan-models" class="btn btn-secondary btn-small" type="button" data-zh="扫描模型" data-en="Scan Models">扫描模型</button>
-                            <span id="scan-status" class="scan-status"></span>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-2">API Key</label>
+                            <input type="password" id="api-key" placeholder="sk-..."
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                        </div>
+                        <div class="flex gap-3">
+                            <select id="api-model" class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                                <option value="">选择模型...</option>
+                            </select>
+                            <button id="save-apikey" class="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                                保存
+                            </button>
                         </div>
                     </div>
-                    <button id="save-apikey" class="btn btn-primary" data-zh="保存 API 设置" data-en="Save API Settings">保存 API 设置</button>
                 </div>
 
-                <div class="panel">
-                    <h2 data-zh="串口设置" data-en="Serial Settings">串口设置</h2>
-                    <div class="form-group">
-                        <label for="default-port" data-zh="默认串口:" data-en="Default Port:">默认串口:</label>
-                        <input type="text" id="default-port" placeholder="/dev/serial0">
+                <!-- Serial Settings -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">串口设置</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-2">默认串口</label>
+                            <input type="text" id="default-port" placeholder="/dev/ttyUSB0"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-2">默认波特率</label>
+                            <input type="number" id="default-baudrate" value="115200"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400 transition-colors">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="default-baudrate" data-zh="默认波特率:" data-en="Default Baudrate:">默认波特率:</label>
-                        <input type="number" id="default-baudrate" value="115200">
-                    </div>
-                    <button id="save-serial" class="btn btn-primary" data-zh="保存串口设置" data-en="Save Serial Settings">保存串口设置</button>
-                </div>
-
-                <div class="panel">
-                    <h2 data-zh="Web 服务器设置" data-en="Web Server Settings">Web 服务器设置</h2>
-                    <div class="form-group">
-                        <label for="web-host" data-zh="监听地址:" data-en="Listen Address:">监听地址:</label>
-                        <input type="text" id="web-host" value="0.0.0.0">
-                    </div>
-                    <div class="form-group">
-                        <label for="web-port" data-zh="端口:" data-en="Port:">端口:</label>
-                        <input type="number" id="web-port" value="8080">
-                    </div>
-                    <button id="save-web" class="btn btn-primary" data-zh="保存 Web 设置" data-en="Save Web Settings">保存 Web 设置</button>
+                    <button id="save-serial" class="mt-4 px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        保存串口设置
+                    </button>
                 </div>
             </section>
         </main>
 
-        <div class="panel log-panel">
-            <h2><span data-zh="日志" data-en="Logs">日志</span> <button id="clear-logs" class="btn btn-secondary btn-small" data-zh="清除" data-en="Clear">清除</button></h2>
-            <div id="log-container" class="log-container">
+        <!-- Log Panel -->
+        <div class="border-t border-gray-200 bg-white">
+            <div class="max-w-5xl mx-auto px-6 py-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">日志</span>
+                    <button id="clear-logs" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">清除</button>
+                </div>
+                <div id="log-container" class="h-24 overflow-y-auto text-xs font-mono text-gray-500 space-y-1">
+                </div>
             </div>
         </div>
     </div>

@@ -784,3 +784,487 @@ class NybbleAgent {
 document.addEventListener('DOMContentLoaded', () => {
     window.agent = new NybbleAgent();
 });
+
+// ==================== Multi-Robot Collaboration Extension ====================
+
+class MultiRobotManager {
+    constructor() {
+        this.myRobotId = null;
+        this.myRole = 'standalone';
+        this.robots = [];
+        this.groups = [];
+        this.formations = [];
+        this.masterConnection = null;
+        this.init();
+    }
+
+    init() {
+        this.loadMyRobotInfo();
+        this.bindMultiRobotEvents();
+        this.updateUIForRole();
+    }
+
+    async loadMyRobotInfo() {
+        try {
+            const response = await fetch('/api/robots');
+            const data = await response.json();
+            this.myRobotId = data.my_robot_id;
+            this.myRole = data.my_role;
+            
+            const robotIdEl = document.getElementById('my-robot-id');
+            const robotRoleEl = document.getElementById('my-robot-role');
+            
+            if (robotIdEl) robotIdEl.textContent = this.myRobotId || '-';
+            if (robotRoleEl) robotRoleEl.textContent = this.myRole || '-';
+            
+            this.updateRoleButtons();
+        } catch (error) {
+            console.error('Failed to load robot info:', error);
+        }
+    }
+
+    bindMultiRobotEvents() {
+        document.querySelectorAll('.btn-role').forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchRole(e.currentTarget.dataset.role));
+        });
+
+        const refreshRobotsBtn = document.getElementById('refresh-robots');
+        if (refreshRobotsBtn) {
+            refreshRobotsBtn.addEventListener('click', () => this.refreshRobots());
+        }
+
+        const addRobotBtn = document.getElementById('add-robot-btn');
+        if (addRobotBtn) {
+            addRobotBtn.addEventListener('click', () => this.addRobot());
+        }
+
+        const refreshGroupsBtn = document.getElementById('refresh-groups');
+        if (refreshGroupsBtn) {
+            refreshGroupsBtn.addEventListener('click', () => this.refreshGroups());
+        }
+
+        const createGroupBtn = document.getElementById('create-group-btn');
+        if (createGroupBtn) {
+            createGroupBtn.addEventListener('click', () => this.createGroup());
+        }
+
+        const executeSyncBtn = document.getElementById('execute-sync-btn');
+        if (executeSyncBtn) {
+            executeSyncBtn.addEventListener('click', () => this.executeSyncAction());
+        }
+
+        const syncTargetSelect = document.getElementById('sync-target');
+        if (syncTargetSelect) {
+            syncTargetSelect.addEventListener('change', (e) => this.updateSyncTargetOptions(e.target.value));
+        }
+
+        const syncActionType = document.getElementById('sync-action-type');
+        if (syncActionType) {
+            syncActionType.addEventListener('change', (e) => this.updateSyncActionParams(e.target.value));
+        }
+
+        const connectMasterBtn = document.getElementById('connect-master-btn');
+        if (connectMasterBtn) {
+            connectMasterBtn.addEventListener('click', () => this.connectToMaster());
+        }
+
+        const disconnectMasterBtn = document.getElementById('disconnect-master-btn');
+        if (disconnectMasterBtn) {
+            disconnectMasterBtn.addEventListener('click', () => this.disconnectFromMaster());
+        }
+    }
+
+    switchRole(role) {
+        if (role === this.myRole) return;
+        alert(`Switching to ${role} mode requires restarting the server with --role ${role}`);
+        this.updateRoleButtons(role);
+    }
+
+    updateRoleButtons(selectedRole = this.myRole) {
+        document.querySelectorAll('.btn-role').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.role === selectedRole);
+        });
+
+        document.querySelectorAll('.role-description').forEach(desc => {
+            desc.style.display = 'none';
+        });
+        const activeDesc = document.getElementById(`role-desc-${selectedRole}`);
+        if (activeDesc) {
+            activeDesc.style.display = 'block';
+        }
+    }
+
+    updateUIForRole() {
+        const isMaster = this.myRole === 'master';
+        const isSlave = this.myRole === 'slave';
+
+        const robotListPanel = document.getElementById('robot-list-panel');
+        const groupPanel = document.getElementById('group-panel');
+        const syncActionPanel = document.getElementById('sync-action-panel');
+        const slavePanel = document.getElementById('slave-panel');
+
+        if (robotListPanel) robotListPanel.style.display = isMaster ? 'block' : 'none';
+        if (groupPanel) groupPanel.style.display = isMaster ? 'block' : 'none';
+        if (syncActionPanel) syncActionPanel.style.display = isMaster ? 'block' : 'none';
+        if (slavePanel) slavePanel.style.display = isSlave ? 'block' : 'none';
+
+        if (isMaster) {
+            this.refreshRobots();
+            this.refreshGroups();
+            this.loadFormations();
+        }
+    }
+
+    async refreshRobots() {
+        try {
+            const response = await fetch('/api/robots');
+            const data = await response.json();
+            this.robots = data.robots || [];
+            this.renderRobotList();
+            this.updateRobotStatusSummary();
+        } catch (error) {
+            console.error('Failed to refresh robots:', error);
+        }
+    }
+
+    renderRobotList() {
+        const container = document.getElementById('robots-container');
+        if (!container) return;
+
+        if (this.robots.length === 0) {
+            container.innerHTML = '<div class="empty-state" data-zh="暂无其他机器人" data-en="No other robots">No other robots</div>';
+            return;
+        }
+
+        container.innerHTML = this.robots.map(robot => `
+            <div class="robot-item">
+                <div class="robot-avatar">🤖</div>
+                <div class="robot-info">
+                    <div class="robot-name">${robot.name}</div>
+                    <div class="robot-details">${robot.ip_address}:${robot.port} | ${robot.role}</div>
+                </div>
+                <div class="robot-status ${robot.status}">${robot.status}</div>
+                <div class="robot-actions">
+                    <button class="btn btn-small btn-secondary" onclick="multiRobotManager.pingRobot('${robot.id}')">Ping</button>
+                    <button class="btn btn-small btn-danger" onclick="multiRobotManager.removeRobot('${robot.id}')">Remove</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    updateRobotStatusSummary() {
+        const online = this.robots.filter(r => r.status === 'online').length;
+        const offline = this.robots.filter(r => r.status === 'offline').length;
+        const busy = this.robots.filter(r => r.status === 'busy').length;
+
+        const onlineEl = document.getElementById('online-count');
+        const offlineEl = document.getElementById('offline-count');
+        const busyEl = document.getElementById('busy-count');
+
+        if (onlineEl) onlineEl.textContent = online;
+        if (offlineEl) offlineEl.textContent = offline;
+        if (busyEl) busyEl.textContent = busy;
+    }
+
+    async addRobot() {
+        const id = document.getElementById('new-robot-id').value;
+        const name = document.getElementById('new-robot-name').value;
+        const ip = document.getElementById('new-robot-ip').value;
+        const port = document.getElementById('new-robot-port').value;
+
+        if (!id || !name) {
+            alert('Please enter robot ID and name');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/robots/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id, name, role: 'slave', status: 'online',
+                    ip_address: ip, port: parseInt(port), serial_port: '/dev/serial0'
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.refreshRobots();
+                document.getElementById('new-robot-id').value = '';
+                document.getElementById('new-robot-name').value = '';
+            }
+        } catch (error) {
+            console.error('Failed to add robot:', error);
+        }
+    }
+
+    async removeRobot(robotId) {
+        if (!confirm(`Remove robot ${robotId}?`)) return;
+
+        try {
+            const response = await fetch('/api/robots/unregister', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ robot_id: robotId })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.refreshRobots();
+            }
+        } catch (error) {
+            console.error('Failed to remove robot:', error);
+        }
+    }
+
+    async pingRobot(robotId) {
+        alert(`Pinging robot ${robotId}...`);
+    }
+
+    async refreshGroups() {
+        try {
+            const response = await fetch('/api/groups');
+            const data = await response.json();
+            this.groups = data.groups || [];
+            this.renderGroupList();
+            this.updateGroupSelection();
+        } catch (error) {
+            console.error('Failed to refresh groups:', error);
+        }
+    }
+
+    renderGroupList() {
+        const container = document.getElementById('groups-container');
+        if (!container) return;
+
+        if (this.groups.length === 0) {
+            container.innerHTML = '<div class="empty-state" data-zh="暂无群组" data-en="No groups">No groups</div>';
+            return;
+        }
+
+        container.innerHTML = this.groups.map(group => `
+            <div class="group-item">
+                <div class="group-header">
+                    <span class="group-name">${group.name}</span>
+                    <span class="group-formation">${group.formation}</span>
+                </div>
+                <div class="group-robots">
+                    ${group.robot_ids.map(id => `<span class="group-robot-tag">${id}</span>`).join('')}
+                </div>
+                <div class="group-actions">
+                    <button class="btn btn-small btn-primary" onclick="multiRobotManager.executeGroupAction('${group.id}')">Execute</button>
+                    <button class="btn btn-small btn-danger" onclick="multiRobotManager.deleteGroup('${group.id}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async createGroup() {
+        const name = document.getElementById('new-group-name').value;
+        const formation = document.getElementById('new-group-formation').value;
+        const checkboxes = document.querySelectorAll('#group-robot-selection input:checked');
+        const robotIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (!name) {
+            alert('Please enter group name');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/groups/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, robot_ids: robotIds, formation })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.refreshGroups();
+                document.getElementById('new-group-name').value = '';
+            }
+        } catch (error) {
+            console.error('Failed to create group:', error);
+        }
+    }
+
+    async deleteGroup(groupId) {
+        if (!confirm('Delete this group?')) return;
+
+        try {
+            const response = await fetch('/api/groups/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group_id: groupId })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.refreshGroups();
+            }
+        } catch (error) {
+            console.error('Failed to delete group:', error);
+        }
+    }
+
+    updateGroupSelection() {
+        const container = document.getElementById('group-robot-selection');
+        if (!container) return;
+
+        container.innerHTML = this.robots.map(robot => `
+            <label class="robot-checkbox-item">
+                <input type="checkbox" value="${robot.id}">
+                <span>${robot.name} (${robot.id})</span>
+            </label>
+        `).join('');
+    }
+
+    async loadFormations() {
+        try {
+            const response = await fetch('/api/formations');
+            const data = await response.json();
+            this.formations = data.formations || [];
+        } catch (error) {
+            console.error('Failed to load formations:', error);
+        }
+    }
+
+    updateSyncTargetOptions(target) {
+        const groupSelect = document.getElementById('sync-group-select');
+        const robotsSelect = document.getElementById('sync-robots-select');
+        
+        if (groupSelect) groupSelect.style.display = target === 'group' ? 'block' : 'none';
+        if (robotsSelect) robotsSelect.style.display = target === 'selected' ? 'block' : 'none';
+
+        if (target === 'group') {
+            const select = document.getElementById('sync-group-id');
+            if (select) select.innerHTML = this.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        }
+
+        if (target === 'selected') {
+            const container = document.getElementById('sync-robot-checkboxes');
+            if (container) {
+                container.innerHTML = this.robots.map(robot => `
+                    <label class="robot-checkbox-item">
+                        <input type="checkbox" value="${robot.id}">
+                        <span>${robot.name} (${robot.id})</span>
+                    </label>
+                `).join('');
+            }
+        }
+    }
+
+    updateSyncActionParams(actionType) {
+        const skillParams = document.getElementById('sync-skill-params');
+        const gaitParams = document.getElementById('sync-gait-params');
+        const jointParams = document.getElementById('sync-joint-params');
+        const customParams = document.getElementById('sync-custom-params');
+
+        if (skillParams) skillParams.style.display = actionType === 'skill' ? 'block' : 'none';
+        if (gaitParams) gaitParams.style.display = actionType === 'gait' ? 'block' : 'none';
+        if (jointParams) jointParams.style.display = actionType === 'joint' ? 'block' : 'none';
+        if (customParams) customParams.style.display = actionType === 'custom' ? 'block' : 'none';
+    }
+
+    async executeSyncAction() {
+        const target = document.getElementById('sync-target').value;
+        const actionType = document.getElementById('sync-action-type').value;
+        const delay = parseFloat(document.getElementById('sync-delay').value);
+
+        let targetRobots = [];
+        if (target === 'all') {
+            targetRobots = ['all'];
+        } else if (target === 'group') {
+            const groupId = document.getElementById('sync-group-id').value;
+            const group = this.groups.find(g => g.id === groupId);
+            if (group) targetRobots = group.robot_ids;
+        } else if (target === 'selected') {
+            const checkboxes = document.querySelectorAll('#sync-robot-checkboxes input:checked');
+            targetRobots = Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        let params = {};
+        if (actionType === 'skill') {
+            params = { name: document.getElementById('sync-skill-name').value };
+        } else if (actionType === 'gait') {
+            params = { name: document.getElementById('sync-gait-name').value };
+        } else if (actionType === 'joint') {
+            params = {
+                joint: parseInt(document.getElementById('sync-joint-id').value),
+                angle: parseInt(document.getElementById('sync-joint-angle').value)
+            };
+        } else if (actionType === 'custom') {
+            params = { command: document.getElementById('sync-custom-command').value };
+        }
+
+        try {
+            const response = await fetch('/api/sync-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action_type: actionType, params, target_robots: targetRobots, delay })
+            });
+
+            const data = await response.json();
+            this.displaySyncResults(data.action);
+        } catch (error) {
+            console.error('Failed to execute sync action:', error);
+        }
+    }
+
+    displaySyncResults(action) {
+        const container = document.getElementById('sync-results');
+        if (!container) return;
+
+        const results = Object.entries(action.results || {}).map(([robotId, result]) => `
+            <div class="sync-result-item">
+                <span>${robotId}</span>
+                <span class="${result.success ? 'result-success' : 'result-failed'}">
+                    ${result.success ? '✓ Success' : '✗ Failed'}
+                </span>
+            </div>
+        `).join('');
+
+        container.innerHTML = `<h4>Execution Results</h4>${results || '<div class="empty-state">No results</div>'}`;
+    }
+
+    async connectToMaster() {
+        const ip = document.getElementById('master-ip-input').value;
+        const port = document.getElementById('master-port-input').value;
+
+        const statusEl = document.getElementById('master-connection-status');
+        const infoEl = document.getElementById('master-info');
+        const idEl = document.getElementById('master-id');
+        const ipEl = document.getElementById('master-ip');
+        const connectBtn = document.getElementById('connect-master-btn');
+        const disconnectBtn = document.getElementById('disconnect-master-btn');
+
+        if (statusEl) {
+            statusEl.textContent = 'Connected';
+            statusEl.className = 'status-value status-online';
+        }
+        if (infoEl) infoEl.style.display = 'block';
+        if (idEl) idEl.textContent = 'master01';
+        if (ipEl) ipEl.textContent = `${ip}:${port}`;
+        if (connectBtn) connectBtn.style.display = 'none';
+        if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+    }
+
+    async disconnectFromMaster() {
+        const statusEl = document.getElementById('master-connection-status');
+        const infoEl = document.getElementById('master-info');
+        const connectBtn = document.getElementById('connect-master-btn');
+        const disconnectBtn = document.getElementById('disconnect-master-btn');
+
+        if (statusEl) {
+            statusEl.textContent = 'Disconnected';
+            statusEl.className = 'status-value disconnected';
+        }
+        if (infoEl) infoEl.style.display = 'none';
+        if (connectBtn) connectBtn.style.display = 'inline-block';
+        if (disconnectBtn) disconnectBtn.style.display = 'none';
+    }
+}
+
+// Initialize multi-robot manager when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.multiRobotManager = new MultiRobotManager();
+});

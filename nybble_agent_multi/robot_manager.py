@@ -39,11 +39,16 @@ class RobotInfo:
     capabilities: List[str] = field(default_factory=list)
     position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0, "z": 0, "yaw": 0})
     battery_level: float = 100.0
+    # 设备别称（昵称）
+    nickname: str = ""  # 用户自定义别名，如"小花"、"Leader"等
+    # 设备标签，用于分组或分类
+    tags: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
+            "nickname": self.nickname,
             "role": self.role.value,
             "status": self.status.value,
             "ip_address": self.ip_address,
@@ -52,8 +57,15 @@ class RobotInfo:
             "last_seen": self.last_seen,
             "capabilities": self.capabilities,
             "position": self.position,
-            "battery_level": self.battery_level
+            "battery_level": self.battery_level,
+            "tags": self.tags
         }
+    
+    def get_display_name(self) -> str:
+        """获取显示名称（优先使用昵称）"""
+        if self.nickname:
+            return f"{self.nickname} ({self.name})"
+        return self.name
 
 @dataclass
 class RobotGroup:
@@ -79,13 +91,33 @@ class RobotGroup:
 class SyncAction:
     """Synchronized action for multiple robots"""
     id: str
-    action_type: str  # skill, gait, joint, sequence
+    action_type: str  # skill, gait, joint, sequence, multi
     params: Dict[str, Any]
     target_robots: List[str]  # Robot IDs or "all"
     delay: float = 0.0
     timestamp: float = field(default_factory=time.time)
     executed: bool = False
     results: Dict[str, Any] = field(default_factory=dict)
+    # 每台机器人的独立延时配置
+    robot_delays: Dict[str, float] = field(default_factory=dict)
+
+@dataclass
+class RobotTask:
+    """Task assignment for a specific robot with individual delay"""
+    robot_id: str
+    action_type: str
+    params: Dict[str, Any]
+    delay: float = 0.0  # 该任务的独立延时
+    wait_for_previous: bool = False  # 是否等待前一个任务完成
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "robot_id": self.robot_id,
+            "action_type": self.action_type,
+            "params": self.params,
+            "delay": self.delay,
+            "wait_for_previous": self.wait_for_previous
+        }
 
 class RobotManager:
     """
@@ -94,9 +126,10 @@ class RobotManager:
     Features:
     - Robot discovery and registration
     - Group management
-    - Synchronized action execution
+    - Synchronized action execution with per-robot delays
     - Formation control
     - Health monitoring
+    - Robot nicknames and tags
     """
     
     def __init__(self, my_robot_id: Optional[str] = None, role: RobotRole = RobotRole.STANDALONE):
@@ -135,7 +168,7 @@ class RobotManager:
         """Register a new robot in the swarm"""
         with self._lock:
             self.robots[robot_info.id] = robot_info
-            logger.info(f"Robot registered: {robot_info.name} ({robot_info.id})")
+            logger.info(f"Robot registered: {robot_info.get_display_name()} ({robot_info.id})")
             return True
     
     def unregister_robot(self, robot_id: str) -> bool:
@@ -143,7 +176,7 @@ class RobotManager:
         with self._lock:
             if robot_id in self.robots:
                 robot = self.robots.pop(robot_id)
-                logger.info(f"Robot unregistered: {robot.name} ({robot_id})")
+                logger.info(f"Robot unregistered: {robot.get_display_name()} ({robot_id})")
                 # Remove from all groups
                 for group in self.groups.values():
                     if robot_id in group.robot_ids:
@@ -160,10 +193,42 @@ class RobotManager:
                 return True
             return False
     
+    def update_robot_nickname(self, robot_id: str, nickname: str) -> bool:
+        """Update robot nickname"""
+        with self._lock:
+            if robot_id in self.robots:
+                old_name = self.robots[robot_id].get_display_name()
+                self.robots[robot_id].nickname = nickname
+                logger.info(f"Robot nickname updated: {old_name} -> {self.robots[robot_id].get_display_name()}")
+                return True
+            return False
+    
+    def update_robot_tags(self, robot_id: str, tags: List[str]) -> bool:
+        """Update robot tags"""
+        with self._lock:
+            if robot_id in self.robots:
+                self.robots[robot_id].tags = tags
+                logger.info(f"Robot tags updated: {robot_id} -> {tags}")
+                return True
+            return False
+    
     def get_robot(self, robot_id: str) -> Optional[RobotInfo]:
         """Get robot information"""
         with self._lock:
             return self.robots.get(robot_id)
+    
+    def get_robot_by_nickname(self, nickname: str) -> Optional[RobotInfo]:
+        """Find robot by nickname"""
+        with self._lock:
+            for robot in self.robots.values():
+                if robot.nickname == nickname:
+                    return robot
+            return None
+    
+    def get_robots_by_tag(self, tag: str) -> List[RobotInfo]:
+        """Get all robots with a specific tag"""
+        with self._lock:
+            return [r for r in self.robots.values() if tag in r.tags]
     
     def get_all_robots(self) -> List[RobotInfo]:
         """Get all registered robots"""
@@ -178,7 +243,7 @@ class RobotManager:
     # ==================== Group Management ====================
     
     def create_group(self, name: str, robot_ids: List[str], formation: str = "none") -> RobotGroup:
-        """Create a new robot group"""
+        """创建一个新的机器人组"""
         with self._lock:
             group = RobotGroup(
                 id=str(uuid.uuid4())[:8],
@@ -240,14 +305,25 @@ class RobotManager:
     # ==================== Synchronized Actions ====================
     
     def execute_sync_action(self, action_type: str, params: Dict[str, Any], 
-                           target_robots: List[str], delay: float = 0.0) -> SyncAction:
-        """Execute synchronized action on multiple robots"""
+                           target_robots: List[str], delay: float = 0.0,
+                           robot_delays: Optional[Dict[str, float]] = None) -> SyncAction:
+        """
+        Execute synchronized action on multiple robots
+        
+        Args:
+            action_type: Type of action (skill, gait, joint, sequence, multi)
+            params: Action parameters
+            target_robots: List of target robot IDs or ["all"]
+            delay: Global delay for all robots
+            robot_delays: Optional dict of {robot_id: delay} for per-robot delays
+        """
         action = SyncAction(
             id=str(uuid.uuid4())[:8],
             action_type=action_type,
             params=params,
             target_robots=target_robots,
-            delay=delay
+            delay=delay,
+            robot_delays=robot_delays or {}
         )
         
         with self._lock:
@@ -258,8 +334,111 @@ class RobotManager:
         
         return action
     
+    def execute_multi_robot_tasks(self, tasks: List[RobotTask], 
+                                  sequential: bool = False) -> Dict[str, Any]:
+        """
+        Execute different tasks on different robots with individual delays
+        
+        Args:
+            tasks: List of RobotTask, each specifying robot_id, action, and delay
+            sequential: If True, wait for each task to complete before next
+        
+        Returns:
+            Dict with results for each robot
+        """
+        results = {}
+        
+        if sequential:
+            # 顺序执行：一个接一个，每个任务可以有自己的延时
+            for task in tasks:
+                result = self._execute_single_task(task)
+                results[task.robot_id] = result
+                # 如果任务设置了等待，则等待该任务完成
+                if task.wait_for_previous and not result.get('success'):
+                    logger.warning(f"Task failed for {task.robot_id}, stopping sequence")
+                    break
+        else:
+            # 并行执行：所有任务同时开始，但各自有自己的延时
+            threads = []
+            result_lock = threading.Lock()
+            
+            def execute_and_store(task):
+                result = self._execute_single_task(task)
+                with result_lock:
+                    results[task.robot_id] = result
+            
+            for task in tasks:
+                thread = threading.Thread(target=execute_and_store, args=(task,))
+                threads.append(thread)
+                thread.start()
+            
+            # 等待所有任务完成
+            for thread in threads:
+                thread.join()
+        
+        return {
+            'success': all(r.get('success', False) for r in results.values()),
+            'results': results,
+            'task_count': len(tasks)
+        }
+    
+    def _execute_single_task(self, task: RobotTask) -> Dict[str, Any]:
+        """Execute a single task on a specific robot"""
+        robot_id = task.robot_id
+        
+        # 先执行延时（如果有）
+        if task.delay > 0:
+            logger.info(f"Task delay for {robot_id}: {task.delay}s")
+            time.sleep(task.delay)
+        
+        # 执行命令
+        if robot_id == self.my_robot_id:
+            # 本机执行
+            if self._command_executor:
+                try:
+                    command = self._build_command(task.action_type, task.params)
+                    success = self._command_executor(command, robot_id)
+                    return {
+                        'success': success,
+                        'robot_id': robot_id,
+                        'action_type': task.action_type,
+                        'delay': task.delay
+                    }
+                except Exception as e:
+                    logger.error(f"Failed to execute task on self: {e}")
+                    return {
+                        'success': False,
+                        'error': str(e),
+                        'robot_id': robot_id
+                    }
+            else:
+                return {
+                    'success': False,
+                    'error': 'No command executor set',
+                    'robot_id': robot_id
+                }
+        else:
+            # 发送到远程机器人
+            if robot_id in self.robots:
+                robot = self.robots[robot_id]
+                logger.info(f"Sending task to remote robot {robot.get_display_name()} ({robot_id})")
+                # TODO: 实现HTTP/WebSocket发送到远程机器人
+                return {
+                    'success': True,
+                    'sent': True,
+                    'robot_id': robot_id,
+                    'robot_name': robot.get_display_name(),
+                    'delay': task.delay
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Robot {robot_id} not found',
+                    'robot_id': robot_id
+                }
+    
     def _execute_action(self, action: SyncAction) -> None:
-        """Execute a synchronized action"""
+        """Execute a synchronized action with per-robot delays"""
         logger.info(f"Executing sync action {action.id}: {action.action_type}")
         
         # Determine target robots
@@ -268,24 +447,25 @@ class RobotManager:
         else:
             target_ids = action.target_robots
         
-        # Include self if in target
-        if self.my_robot_id in target_ids or "all" in action.target_robots:
-            if self._command_executor:
-                try:
-                    command = self._build_command(action.action_type, action.params)
-                    success = self._command_executor(command, self.my_robot_id)
-                    action.results[self.my_robot_id] = {"success": success}
-                except Exception as e:
-                    logger.error(f"Failed to execute action on self: {e}")
-                    action.results[self.my_robot_id] = {"success": False, "error": str(e)}
-        
-        # Send to other robots (in real implementation, this would use network)
+        # 为每个机器人创建任务，包含各自的延时
+        tasks = []
         for robot_id in target_ids:
-            if robot_id != self.my_robot_id and robot_id in self.robots:
-                # TODO: Send command to remote robot via HTTP/WebSocket
-                logger.info(f"Would send action to robot {robot_id}")
-                action.results[robot_id] = {"success": True, "sent": True}
+            # 获取该机器人的延时（优先使用robot_delays中的配置）
+            robot_delay = action.robot_delays.get(robot_id, action.delay)
+            
+            task = RobotTask(
+                robot_id=robot_id,
+                action_type=action.action_type,
+                params=action.params,
+                delay=robot_delay
+            )
+            tasks.append(task)
         
+        # 并行执行所有任务（每个任务有自己的延时）
+        results = self.execute_multi_robot_tasks(tasks, sequential=False)
+        
+        # 更新action结果
+        action.results.update(results['results'])
         action.executed = True
         
         # Notify callbacks
@@ -410,7 +590,7 @@ class RobotManager:
                     if current_time - robot.last_seen > 30:
                         if robot.status != RobotStatus.OFFLINE:
                             robot.status = RobotStatus.OFFLINE
-                            logger.warning(f"Robot {robot_id} marked as offline")
+                            logger.warning(f"Robot {robot.get_display_name()} ({robot_id}) marked as offline")
             
             time.sleep(interval)
     
